@@ -1,0 +1,17 @@
+CC=g++
+INCLUDE=-I/usr/include/freetype2
+LIB=-lglfw -lglad -lboost_program_options -lboost_filesystem
+FLAGS=-std=c++17 -Wall
+
+all: entropy rewarder
+
+entropy: 
+	$(CC) $(LIB) $(FLAGS) src/encoder/kmeans_encoder.cpp src/rewarder/kmeans_rewarder.cpp src/entropy/entropy.cpp -o entropy
+
+rewarder:
+	$(CC) $(LIB) $(FLAGS) -fPIC -shared -Wl,-soname,librewarder.so -o kme/librewarder.so src/util/sampler.cpp src/util/util.cpp src/encoder/kmeans_encoder.cpp src/rewarder/kmeans_rewarder.cpp kme/rewarder.c
+
+.PHONY: clean
+
+clean:
+	rm -r build entropy kme/librewarder.so
