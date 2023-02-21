@@ -1,6 +1,6 @@
 # k-Means Maximum Entropy Exploration
 
-Code for reproducing experiments for the publication found at https://arxiv.org/abs/2205.15623
+https://arxiv.org/abs/2205.15623
 
 The directory mujoco contains code to reproduce exploration experiments and the directory kme contains
 - a C++ implementation of KME
