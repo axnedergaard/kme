@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "kme"
+version = "0.1.0"
+description = ""
+authors = []
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.12"
+numpy = "^1.24.2"
+scipy = "^1.10.1"
+torch = "^2.0.0"
+black = "^23.3.0"
+autoflake = "^2.0.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
