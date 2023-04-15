@@ -8,11 +8,16 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = ">=3.9,<3.12"
 numpy = "^1.24.2"
-scipy = "^1.10.1"
 torch = "^2.0.0"
 black = "^23.3.0"
 autoflake = "^2.0.2"
-
+dm-control = "^1.0.11"
+hydra-core = "^1.3.2"
+wandb = "^0.14.2"
+setuptools = "66.0.0"
+gym = "0.21.0" # https://github.com/openai/gym/issues/3200
+stable-baselines3 = {path = "mujoco/libs/stable-baselines3"}
+# $ cd kme.cpp && pip install .
 
 [build-system]
 requires = ["poetry-core"]
