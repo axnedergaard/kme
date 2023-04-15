@@ -6,7 +6,7 @@ from stable_baselines3.common.logger import configure, Logger
 from envs import load
 from util.dmc2gym import GymWrapper
 from util.callbacks import CheckpointCallback
-from ire.rewarder import Rewarder
+# from ire.rewarder import Rewarder
 import numpy as np
 import torch
 from torch import nn
