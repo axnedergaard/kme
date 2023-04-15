@@ -15,6 +15,9 @@ libs/
 # Scrapy stuff
 .scrapy
 
+# Experiments outputs
+outputs/
+
 # ===============================
 # == PYTHON .GITIGNORE SECTION ==
 # ===============================
