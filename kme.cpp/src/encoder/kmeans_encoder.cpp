@@ -5,8 +5,6 @@
 #include <vector>
 #include <limits>
 
-#include <iostream>
-
 #define EPS 1
 
 KMeansEncoder::KMeansEncoder(int n_states, int k, double learning_rate, double balancing_strength, bool homeostasis) : Encoder(n_states, k), learning_rate(learning_rate), balancing_strength(balancing_strength), homeostasis(homeostasis) {
