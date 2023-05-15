@@ -1,0 +1,11 @@
+{
+    "configurations": [
+        {
+            "name": "username",
+            "includePath": [
+                "${workspaceFolder}/**"
+            ]
+        }
+    ],
+    "version": 4
+}
