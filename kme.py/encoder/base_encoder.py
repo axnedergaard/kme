@@ -1,21 +1,20 @@
-import abc
+from abc import ABC, abstractmethod
+from torch import Tensor
 
 
-class BaseEncoder(abc.ABC):
-    def __init__(self, n_states, n_components):
-        self.n_states = n_states
-        self.n_components = n_components
+class BaseEncoder(ABC):
 
-    @abc.abstractmethod
-    def embed(self, state, learn=True):
-        """
-        Embeds the input state into a lower-dimensional representation.
-        """
+    def __init__(self, n_states: int, n_dims: int):
+        self.n_states: int = n_states
+        self.n_dims: int = n_dims
+        self.reward: float = 0.0
+
+    @abstractmethod
+    def embed(self, state: Tensor, repr: Tensor) -> Tensor:
+        """Embeds the input state into a lower-dimensional representation."""
         raise NotImplementedError
 
-    @abc.abstractmethod
-    def reset(self):
-        """
-        Resets the internal state of the encoder.
-        """
+    @abstractmethod
+    def reset(self) -> None:
+        """Resets the internal state of the encoder."""
         raise NotImplementedError
