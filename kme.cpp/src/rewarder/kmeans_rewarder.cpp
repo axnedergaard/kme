@@ -1,6 +1,5 @@
 #include "kmeans_rewarder.h"
 #include "math.h"
-#include <iostream>
 
 double KMeansRewarder::EntropicFunction(double x) {
   if (function_type == EntropicFunctionType::LOG) {
@@ -32,7 +31,7 @@ KMeansRewarder::KMeansRewarder(int k, EntropicFunctionType function_type, int n_
 }
 
 double KMeansRewarder::Infer(VectorXd *next_state, VectorXd *action, VectorXd *state, bool learn) {
-  VectorXd encoded_next_state;
+  VectorXd encoded_next_state = *next_state;
   double entropy_before, entropy_after;
   if (differential) {
     entropy_before = EstimateEntropy(encoder);
@@ -42,7 +41,6 @@ double KMeansRewarder::Infer(VectorXd *next_state, VectorXd *action, VectorXd *s
     entropy_after = EstimateEntropy(encoder);
   } else {
     KMeansEncoder tmp_encoder = KMeansEncoder(*encoder);
-    //KMeansEncoder tmp_encoder = *encoder;
     tmp_encoder.Embed(encoded_next_state, NULL);
     entropy_after = EstimateEntropy(&tmp_encoder);
   }

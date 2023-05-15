@@ -4,7 +4,6 @@
 
 class KMeansEncoder : public Encoder {
   private:
-    int k;
     double learning_rate;
     double balancing_strength;
     int homeostasis;
