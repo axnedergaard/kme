@@ -3,8 +3,11 @@
         {
             "name": "username",
             "includePath": [
-                "${workspaceFolder}/**"
-            ]
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/kme.cpp/**",
+                "/opt/homebrew/include"
+            ],
+            "configurationProvider": "ms-vscode.makefile-tools"
         }
     ],
     "version": 4
