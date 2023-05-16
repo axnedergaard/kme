@@ -23,19 +23,31 @@ def _gaussian_mixture(x, dim, means, std_devs):
     return np.stack([s.reshape(-1) for s in samples])
 
 
-def _random_walk(x, dim):
-    steps = np.random.choice([-1, 1], size=(x, dim))
+def _random_walk_man(x, dim, step_size=1.):
+    # random walk in manhattan space (orthogonal steps only)
+    steps = np.random.choice([-step_size, 0, step_size], size=(x, dim))
+    return np.cumsum(steps, axis=0)
+
+
+def _random_walk_euc(x, dim, step_size=1.):
+    # random walk in euclidean space
+    # choose directions uniformly from the unit sphere 
+    # by normalizing a vector of normal random variables
+    random_directions = np.random.normal(size=(x, dim))
+    random_directions /= np.linalg.norm(random_directions, axis=1)[:, np.newaxis]
+    steps = step_size * random_directions
     return np.cumsum(steps, axis=0)
 
 
 # --- public interface ---
 
-supported_distributions = ['uniform', 'gaussian', 'gaussian-mixture', 'random-walk']
+supported_distributions = ['uniform', 'gaussian', 'gaussian-mixture', 'random-walk-man', 'random-walk-euc']
 
 
 def sample_from(distribution, x, d, **kwargs):
     # sample x d-dimensional points from a given distribution
     # supports: uniform, gaussian, gaussian-mixture, random-walk
+    print(x, d, kwargs)
 
     if distribution not in supported_distributions:
         raise ValueError(f"Unsupported distribution: {distribution} not in {supported_distributions}")
@@ -55,6 +67,11 @@ def sample_from(distribution, x, d, **kwargs):
         std_devs = kwargs.get('std_devs')
         return _gaussian_mixture(x, d, means, std_devs)
 
-    elif distribution == 'random_walk':
-        return _random_walk(x, d)
+    elif distribution == 'random-walk-man':
+        step_size = kwargs.get('step_size', 1.0)
+        return _random_walk_man(x, d, step_size=step_size)
+    
+    elif distribution == 'random-walk-euc':
+        step_size = kwargs.get('step_size', 1.0)
+        return _random_walk_euc(x, d, step_size=step_size)
     
