@@ -1,4 +1,5 @@
 import copy
+from typing import Callable
 
 import torch
 from torch import Tensor
@@ -59,12 +60,12 @@ class KMeansEncoder:
         return torch.zeros((k, dim_states), dtype=dtype, device=device)
 
 
-    def _euclidean_dist(self, t1: Tensor, t2: Tensor, p: float | str = 2) -> float:
+    def _euclidean_dist(self, t1: Tensor, t2: Tensor, p: float = 2) -> Tensor:
         # Computes Euclidean distance between two torch.Tensors objects.
-        return torch.norm(t1 - t2, p=p).item()
+        return torch.norm(t1 - t2, p=p)
 
 
-    def _dist_to_clusters(self, state: Tensor, dist_fn: function) -> Tensor:
+    def _dist_to_clusters(self, state: Tensor, dist_fn: Callable) -> Tensor:
         # Computes objective distances between a given state and all centroids.
         distances = dist_fn(state, self.centroids)
         
@@ -75,11 +76,11 @@ class KMeansEncoder:
         return distances
 
 
-    def _find_closest_cluster(self, state: Tensor) -> tuple(float, int):
+    def _find_closest_cluster(self, state: Tensor) -> int:
         # Finds the closest cluster and distance to a given state.
         distances: Tensor = self._dist_to_clusters(state, self._euclidean_dist)
-        closest_cluster_idx = torch.argmin(distances).item()
-        return closest_cluster_idx
+        closest_cluster_idx = torch.argmin(distances)
+        return closest_cluster_idx.item() # .CHECK for GPU
 
 
     def _online_update_clusters(self, state: Tensor, closest_cluster_idx: int) -> None:
