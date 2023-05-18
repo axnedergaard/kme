@@ -5,6 +5,11 @@
 # Installed libraries
 libs/
 
+# deprecated stuff
+testenv
+*.dep
+.dep*
+
 # IDE stuff
 .vscode/
 .idea/
