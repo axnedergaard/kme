@@ -17,7 +17,15 @@ wandb = "^0.14.2"
 setuptools = "66.0.0"
 gym = "0.21.0" # https://github.com/openai/gym/issues/3200
 stable-baselines3 = {path = "mujoco/libs/stable-baselines3"}
-# $ cd kme.cpp && pip install .
+loguru = "^0.7.0"
+scikit-learn = "^1.2.2"
+ipykernel = "^6.23.1"
+
+# $ cd kme.cpp && pip install . # for `kme`
+# $ cd kme.py && pip install .  # for `torchkme`
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.23.1"
 
 [build-system]
 requires = ["poetry-core"]
