@@ -1,0 +1,14 @@
+torch>=2.0.0
+black>=23.3.0
+autoflake>=2.0.2
+dm-control>=1.0.11
+hydra-core>=1.3.2
+wandb>=0.14.2
+loguru>=0.7.0
+
+# `torchkme` package
+./kme.py
+
+#`kme` cpp wrapper package
+# Uncomment once you built lib.so
+#./kme.cpp
