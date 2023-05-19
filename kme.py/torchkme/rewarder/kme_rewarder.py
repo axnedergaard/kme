@@ -4,8 +4,8 @@ from enum import Enum
 import torch
 from torch import Tensor
 
-from .kmeans.kmeans_encoder import KMeansEncoder
-from .constvars import device
+from ..kmeans import KMeansEncoder
+from ..constvars import device
 
 
 class EntropicFunctionType(Enum):

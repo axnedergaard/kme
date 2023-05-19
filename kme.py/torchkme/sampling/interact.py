@@ -1,4 +1,4 @@
-from sampler import sample_from, supported_distributions
+from .sampler import sample_from, supported_distributions
 from time import sleep
 from sys import argv
 

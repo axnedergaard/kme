@@ -24,7 +24,7 @@ class KMeansEncoder:
 
         # tunable hyperparameters
         self.hp_learning_rate: Tensor = torch.tensor(learning_rate, dtype=dtype, device=device)
-        self.hp_balancing_strength: Tensor = torch.Tensor(balancing_strength, dtype=dtype, device=device)
+        self.hp_balancing_strength: Tensor = torch.tensor(balancing_strength, dtype=dtype, device=device)
         self.hp_homeostasis: bool = homeostasis
 
         # internal kmeans encoder state
