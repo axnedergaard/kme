@@ -1,5 +1,5 @@
 import copy
-from typing import Callable
+from typing import Callable, Tuple
 
 import torch
 from torch import Tensor
@@ -38,17 +38,17 @@ class KMeansEncoder:
     def clone(self) -> 'KMeansEncoder':
         return copy.deepcopy(self)
 
-    def update(self, state: Tensor) -> 'KMeansEncoder':
+    def update(self, state: Tensor) -> Tuple['KMeansEncoder', int]:
         # Updates the internal state of the KMeansEncoder with a new state.
         # according to algorithm (1) in https://arxiv.org/pdf/2205.15623.pdf
         closest_cluster_idx = self._find_closest_cluster(state)
         self._online_update_clusters(state, closest_cluster_idx)
         self.closest_distances = self._dist_to_clusters(state, self._euclidean_dist)
         # CHECK. we dont have anymore access to pathological updates count here.
-        return self
+        return self, closest_cluster_idx
 
 
-    def sim_update_v1(self, state: Tensor) -> 'KMeansEncoder':
+    def sim_update_v1(self, state: Tensor) -> Tuple['KMeansEncoder']:
         # Simulates a KMeansEncoder update with a new state.
         return self.clone().update(state)
 

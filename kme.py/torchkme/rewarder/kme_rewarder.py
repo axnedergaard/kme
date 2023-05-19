@@ -59,9 +59,10 @@ class KMERewarder:
         # make sure we port next_state to a torch tensor
         next_state = torch.tensor(next_state, dtype=dtype, device=device)
         
-        entropy_before: Tensor = self._estimate_entropy_lb(self.k_encoder) # .NOT OPTIMAL
+        if self.differential:
+            entropy_before: Tensor = self._estimate_entropy_lb(self.k_encoder)
         
-        tmp_encoder = self.k_encoder.update(next_state) \
+        tmp_encoder, cluster_idx = self.k_encoder.update(next_state) \
             if learn else self.k_encoder.sim_update(next_state)
 
         if self.differential:
@@ -70,7 +71,7 @@ class KMERewarder:
         else:
             reward = self._estimate_entropy_lb(tmp_encoder)
 
-        return reward, 0.0 # no pathological updates yet.
+        return reward, 0.0, cluster_idx # no pathological updates yet.
 
 
     # --- private interface methods ---
