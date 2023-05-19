@@ -62,13 +62,13 @@ class KMeansEncoder:
 
     def _euclidean_dist(self, t1: Tensor, t2: Tensor, p: float = 2) -> Tensor:
         # Computes Euclidean distance between two torch.Tensors objects.
-        return torch.norm(t1 - t2, p=p)
+        return torch.norm(t1 - t2, p=p, dim=-1)
 
 
     def _dist_to_clusters(self, state: Tensor, dist_fn: Callable) -> Tensor:
         # Computes objective distances between a given state and all centroids.
-        distances = dist_fn(state, self.centroids)
-        
+        distances = dist_fn(state.unsqueeze(0), self.centroids.unsqueeze(1)).view(-1)
+
         if self.hp_homeostasis:
             mean = torch.mean(self.cluster_sizes).item()
             distances += self.hp_balancing_strength * (self.cluster_sizes - mean)
@@ -89,7 +89,7 @@ class KMeansEncoder:
         self._update_cluster_size(closest_cluster_idx)
 
 
-    def _update_centroids_center(self, state: Tensor, closest_cluster_idx: int) -> None:
+    def _update_cluster_centroid(self, state: Tensor, closest_cluster_idx: int) -> None:
         # Online update of closest cluster centroid with new state.
         state_contribution = self.hp_learning_rate * state
         centroid_contribution = (1 - self.hp_learning_rate) * self.centroids[closest_cluster_idx]

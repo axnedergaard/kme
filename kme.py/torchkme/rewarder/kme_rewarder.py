@@ -5,7 +5,7 @@ import torch
 from torch import Tensor
 
 from ..kmeans import KMeansEncoder
-from ..constvars import device
+from ..constvars import device, dtype
 
 
 class EntropicFunctionType(Enum):
@@ -36,7 +36,7 @@ class KMERewarder:
             raise ValueError(f"Entropic function '{function_type}' not supported.")
 
         # entropic fn. calculation specs
-        self.diffential: bool = differential
+        self.differential: bool = differential
         self.fn_type: str = function_type
         self.power_fn_exponent: Tensor = torch.tensor(power_fn_exponent, device=device)
         self.eps: Tensor = torch.tensor(eps, device=device)
@@ -55,26 +55,30 @@ class KMERewarder:
     def infer(self, next_state: Tensor, learn: bool = True) -> tuple:
         # Infer the reward and the number of pathological updates given the next state
         # .BAD NAMING CONVENTION FOR LEARN PARAMETER
+
+        # make sure we port next_state to a torch tensor
+        next_state = torch.tensor(next_state, dtype=dtype, device=device)
         
-        entropy_before: Tensor = self._estimate_entropy_lb(self.kmeans_enc) # .NOT OPTIMAL
-        encoder = self.kmeans_enc.update(next_state, self.learning_rate) \
-            if learn else self.kmeans_enc.sim_update(next_state, self.learning_rate)
+        entropy_before: Tensor = self._estimate_entropy_lb(self.k_encoder) # .NOT OPTIMAL
+        
+        tmp_encoder = self.k_encoder.update(next_state) \
+            if learn else self.k_encoder.sim_update(next_state)
 
         if self.differential:
-            entropy_after: Tensor = self._estimate_entropy_lb(encoder)
+            entropy_after: Tensor = self._estimate_entropy_lb(tmp_encoder)
             reward = entropy_before - entropy_after
         else:
-            reward = self._estimate_entropy_lb(encoder)
+            reward = self._estimate_entropy_lb(tmp_encoder)
 
         return reward, 0.0 # no pathological updates yet.
 
 
     # --- private interface methods ---
 
-    def _estimate_entropy_lb(self, kmeans_enc: KMeansEncoder) -> Tensor:
+    def _estimate_entropy_lb(self, encoder: KMeansEncoder) -> Tensor:
         # Estimate the lower bound of the entropy of the kmeans encoding
         # according to eq. (3) in https://arxiv.org/pdf/2205.15623.pdf
-        entropies = self._entropic_function(kmeans_enc.closest_distances)
+        entropies = self._entropic_function(encoder.closest_distances)
         return torch.sum(entropies)
 
 
