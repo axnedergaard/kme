@@ -10,6 +10,6 @@ setup(
   packages = ['torchkme'],
   version=meta['__version__'],
   author="Andrea Pinto",
-  author_email="andreakiro.pinto@gmail.com",
+  author_email="pintoa@ethz.ch",
   python_requires=">=3.9"
 )

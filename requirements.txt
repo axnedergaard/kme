@@ -9,8 +9,8 @@ matplotlib
 numpy
 
 # `torchkme` package
-./kme.py
+-e ./kme.all/kme.py
 
-#`kme` cpp wrapper package
-# Uncomment once you built lib.so
-#./kme.cpp
+# `kme` cpp wrapper package
+# Uncomment once you built lib.so only
+# -e ./kme.all/kme.cpp
