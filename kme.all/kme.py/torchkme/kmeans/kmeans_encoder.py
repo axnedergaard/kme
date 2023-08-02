@@ -55,10 +55,24 @@ class KMeansEncoder:
 
     # --- private interface methods ---
 
-    def _init_centroids(self, k: int, dim_states: int) -> Tensor:
-        # Initializes centroids according to kmeans++ algorithm. NOT implemented yet!
+    def _init_centroids_zeros(self, k: int, dim_states: int) -> Tensor:
+        # Initializes centroids at zero
         return torch.zeros((k, dim_states), dtype=dtype, device=device)
-
+    
+    def _init_centroids(self, k: int, dim_states: int) -> Tensor:
+        # Initialize the first centroid randomly from a standard normal distribution
+        centroids = torch.randn((1, dim_states), dtype=dtype, device=device)
+        
+        for i in range(1, k):
+            # fit centroids to mixture of normal distributions
+            sample_points = torch.randn((1000, dim_states), dtype=dtype, device=device) # adjust the sample size as needed
+            distances = torch.min(self._euclidean_dist(sample_points.unsqueeze(1), centroids.unsqueeze(0), dim=-1), dim=1)[0]
+            probabilities = distances / torch.sum(distances)
+            new_centroid_idx = torch.multinomial(probabilities, 1)
+            new_centroid = sample_points[new_centroid_idx].view(1, dim_states)
+            centroids = torch.cat((centroids, new_centroid), dim=0)
+        
+        return centroids
 
     def _euclidean_dist(self, t1: Tensor, t2: Tensor, p: float = 2) -> Tensor:
         # Computes Euclidean distance between two torch.Tensors objects.
