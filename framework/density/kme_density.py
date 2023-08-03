@@ -1,30 +1,33 @@
 from .density import Density
-from torchkme import KMERewarder
+from torchkme import KMeansEncoder
 from typing import Optional
 from scipy.stats import multivariate_normal, quad
 import numpy as np
 import torch
 
 class KMeansDensity(Density):
-    def __init__(self,
+    def __init__(
+        self,
         k: int,
         dim_states: int,
-        dim_actions: int,
         learning_rate: float,
         balancing_strength: float,
-        function_type: str,
-        power_fn_exponent: Optional[float] = 0.5,
-        eps: Optional[float] = 1e-9,
-        homeostasis: bool = True,
-        differential: bool = True,
-        ambient_dim: int = None
+        homeostasis: float,
+        init_method: str = 'kmeans++'
     ) -> None:
         
-        super().__init__(ambient_dim)
+        super().__init__(ambient_dim=dim_states)
 
-        # init kme rewarder from torchkme module
-        self.rewarder = KMERewarder(k, dim_states, dim_actions, learning_rate, balancing_strength,
-                                    function_type, power_fn_exponent, eps, homeostasis, differential)
+        # init kme encoder from torchkme module
+        self.k_encoder = KMeansEncoder(
+            k=k,
+            dim_states=dim_states,
+            learning_rate=learning_rate,
+            balancing_strength=balancing_strength,
+            homeostasis=homeostasis,
+            init_method=init_method
+        )
+    
 
     def sample(self, n_samples: int) -> torch.Tensor:
         """
@@ -38,8 +41,8 @@ class KMeansDensity(Density):
         """
         samples = []
         for _ in range(n_samples):
-            idx = np.random.choice(len(self.rewarder.k_encoder.centroids))
-            centroid = self.rewarder.k_encoder.centroids[idx]
+            idx = np.random.choice(len(self.k_encoder.centroids))
+            centroid = self.k_encoder.centroids[idx]
             covariance = np.eye(centroid.shape[0])  # assuming identity covariance matrix
             sample = np.random.multivariate_normal(centroid, covariance)
             samples.append(sample)
@@ -56,7 +59,7 @@ class KMeansDensity(Density):
         """
         probabilities = []
         x_np = x.numpy()
-        for centroid in self.rewarder.k_encoder.centroids:
+        for centroid in self.k_encoder.centroids:
             covariance = np.eye(centroid.shape[0])  # assuming identity covariance matrix
             probabilities.append(multivariate_normal.pdf(x_np, mean=centroid, cov=covariance))
         return sum(probabilities) / len(probabilities)
@@ -79,12 +82,8 @@ class KMeansDensity(Density):
 
 
     def entropy(self) -> float:
-        return self.rewarder._estimate_entropy_lb(self.rewarder.k_encoder).item()
-
-    def learn(self, next_state: torch.Tensor) -> float:
-        reward, _, _ = self.rewarder.infer(next_state, update_encoder=True)
-        return reward.item()
-
-    def infer(self, next_state: torch.Tensor) -> float:
-        reward, _, _ = self.rewarder.infer(next_state, update_encoder=False)
-        return reward.item()
+        raise NotImplementedError()
+    
+    def learn(self, next_state: torch.Tensor) -> None:
+        raise NotImplementedError() 
+    
