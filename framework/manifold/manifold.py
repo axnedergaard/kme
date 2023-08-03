@@ -3,8 +3,39 @@ import scipy
 
 # TODO. Sampling multiple points in one call for Euclidean and Spherical.
 # TODO. Proper definition of state and action space.
-# TODO. Proper implementation of hypersphere (support d!=2 and use multiple charts to avoid singularities.
-# TODO. More manifolds.
+# TODO. Proper implementation of hypersphere and torus (support d!=2 and use multiple charts to avoid singularities.
+# TODO. Fix sampling in torus.
+# TODO. Confirm distance function on torus.
+
+def standardize_angle(x):
+  x = x % (2 * np.pi)
+  if x < 0:
+    x += 2 * np.pi
+  return x
+
+def modular_distance(x, y, m):
+  d = 0
+  for _x, _y in zip(x, y):
+    _x = _x % m
+    if _x < 0:
+      _x += m
+    _y = _y % m
+    if _y < 0:
+      _y += m
+    d += (_x - _y) ** 2
+  return d
+
+def modular_equals(x, y, m):
+  for _x, _y in zip(x, y):
+    _x = _x % m
+    if _x < 0:
+      _x += m
+    _y = _y % m
+    if _y < 0:
+      _y += m
+    if _x != _y:
+      return False
+  return True
 
 class Chart():
   # We assume chart domains and images are balls.
@@ -28,16 +59,20 @@ class Chart():
 class Manifold():
   def __init__(self):
     self.max_step_size = 0.01 # TODO.
+
+  def reset(self):
+    self.state = self.starting_state()
+    return self.state.copy()
   
   def step(self, action):
     # Warning: Undefined behavior if reset not called before this.
     self.state = self._manifold_step(self.state, action, self.max_step_size)
     return self.state.copy()
 
-  def random_walk(self, n_samples, starting_state=None, step_size=None):
-    state = starting_state if starting_state is not None else np.array([1.0] + [0.0] * (self.ambient_dim - 1))
+  def random_walk(self, n, starting_state=None, step_size=None):
+    state = starting_state if starting_state is not None else self.starting_state() 
     samples = []
-    for i in range(n_samples):
+    for i in range(n):
       prob_state = self.pdf(state)
       accepted = False
       while not accepted:
@@ -49,7 +84,7 @@ class Manifold():
           accepted = True
       samples.append(state)
     return np.array(samples)
-  
+
   def _manifold_step(self, state, action, max_step_size):
     action_euclidean_size = np.linalg.norm(action)
     action_metric_size = self._metric_size(state, action) # This is a crude approximation.
@@ -66,14 +101,32 @@ class Manifold():
   def _metric_size(self, state, action):
     return np.matmul(action, np.matmul(self.metric_tensor(state), action.T)) 
 
+  def starting_state(self):
+    raise NotImplementedError
+
+  def pdf(self, x):
+    raise NotImplementedError
+
+  def sample(self):
+    raise NotImplementedError
+
+  def distance(self, x, y):
+    raise NotImplementedError
+
+  def metric_tensor(self):
+    raise NotImplementedError
+
+  def implicit_equation(self, c):
+    raise NotImplementedError
+
 class EuclideanManifold(Manifold):
-  def __init__(self, dim, low, high, sampler):
+  def __init__(self, dim, sampler):
     super(EuclideanManifold, self).__init__()
 
     self.dim = dim
     self.ambient_dim = dim
-    self.low = low
-    self.high = high
+    self.low = -1.0 
+    self.high = 1.0 
     self.state_dim = dim
     self.action_dim = dim
     self.sampler = sampler 
@@ -92,17 +145,8 @@ class EuclideanManifold(Manifold):
     if self.sampler['type'] == 'uniform':
       assert self.low <= self.sampler['low'] and self.sampler['high'] <= self.high
 
-  def reset(self):
-    self.state = np.zeros(self.dim)
-    return self.state
-
-  def sample(self, n_samples):
-    if n_samples > 1: # TODO.
-      return np.array([self.sample(1) for _ in range(n_samples)])
-    if self.sampler['type'] == 'uniform':
-      return np.random.uniform(self.sampler['low'], self.sampler['high'], self.dim)
-    elif self.sampler['type'] == 'gaussian':
-      return np.random.normal(self.sampler['mean'], self.sampler['std'], self.dim)
+  def starting_state(self):
+    return np.zeros(self.dim)
 
   def pdf(self, x):
     if self.sampler['type'] == 'uniform':
@@ -113,12 +157,26 @@ class EuclideanManifold(Manifold):
     elif self.sampler['type'] == 'gaussian':
       return np.exp(-np.sum((x - self.sampler['mean'])**2) / (2 * self.sampler['std']**2)) / (np.sqrt((2 * np.pi)**self.dim) * self.sampler['std'])
 
+  def sample(self, n):
+    if n > 1: # TODO.
+      return np.array([self.sample(1) for _ in range(n)])
+    if self.sampler['type'] == 'uniform':
+      return np.random.uniform(self.sampler['low'], self.sampler['high'], self.dim)
+    elif self.sampler['type'] == 'gaussian':
+      return np.random.normal(self.sampler['mean'], self.sampler['std'], self.dim)
+
   @staticmethod
   def distance(x, y):
     return np.linalg.norm(x - y)
 
   def metric_tensor(self, x):
     return np.eye(self.dim)
+
+  def implicit_equation(self, c):
+    if self.dim >= 3:
+      raise ValueError
+    else:
+      return 0.0
 
 class SphericalManifold(Manifold):
   # We assume unit radius.
@@ -134,28 +192,19 @@ class SphericalManifold(Manifold):
     # TODO. Right now this only works for dim=2 and has a singular point.
     self.charts = [
       Chart(
-        domain_center=np.array([0.0, 1.0, 0.0]),
+        domain_center=self._from_local(np.zeros(self.dim)),
         domain_radius=np.inf, # TODO
         image_radius=np.inf, # TODO
-        map_=self._cartesian_to_spherical,
-        inverse_map=self._spherical_to_cartesian,
+        map_=self._to_local,
+        inverse_map=self._from_local,
         distance_function=self.distance
       )
     ]
 
-  def reset(self):
-    self.state = np.zeros(self.dim + 1)
-    self.state[0] = 1.0
-    return self.state
+  def starting_state(self):
+    return self._from_local(np.zeros(self.dim))
+    #return np.array([1.0] + [0.0] * self.dim)
 
-  def sample(self, n_samples):
-    if n_samples > 1: # TODO.
-      return np.array([self.sample(1) for _ in range(n_samples)])
-    if self.sampler['type'] == 'uniform':
-      return self._sample_uniform(self.dim)
-    elif self.sampler['type'] == 'vonmises_fisher':
-      return scipy.stats.vonmises_fisher.rvs(self.sampler['mu'], self.sampler['kappa'], size=1)[0]
-      
   def pdf(self, x):
     if self.sampler['type'] == 'uniform':
       if np.linalg.norm(x) == 1: 
@@ -165,6 +214,14 @@ class SphericalManifold(Manifold):
     elif self.sampler['type'] == 'vonmises_fisher':
       return scipy.stats.vonmises_fisher.pdf(x, self.sampler['mu'], self.sampler['kappa'])
 
+  def sample(self, n):
+    if n > 1: # TODO.
+      return np.array([self.sample(1) for _ in range(n)])
+    if self.sampler['type'] == 'uniform':
+      return self._sample_uniform(self.dim)
+    elif self.sampler['type'] == 'vonmises_fisher':
+      return scipy.stats.vonmises_fisher.rvs(self.sampler['mu'], self.sampler['kappa'], size=1)[0]
+      
   def distance(self, x, y):
     return np.arccos(np.dot(x, y))
 
@@ -174,18 +231,169 @@ class SphericalManifold(Manifold):
         [0.0, np.sin(x[0])**2]
       ])
 
-  def _cartesian_to_spherical(self, x): 
-    theta = np.arccos(x[0])
-    phi = np.arctan2(x[1], x[2])
+  def _to_local(self, c): 
+    theta = np.arccos(c[0])
+    phi = np.arctan2(c[1], c[2])
     return np.array([theta, phi])
 
-  def _spherical_to_cartesian(self, _x): 
-    x = np.sin(_x[0]) * np.cos(_x[1])
-    y = np.sin(_x[0]) * np.sin(_x[1])
-    z = np.cos(_x[0])
+  def _from_local(self, c): 
+    x = np.sin(c[0]) * np.cos(c[1])
+    y = np.sin(c[0]) * np.sin(c[1])
+    z = np.cos(c[0])
     return np.array([x, y, z])
 
   @staticmethod
   def _sample_uniform(dim):
     x = np.random.normal(0, 1, dim + 1)
     return x / np.linalg.norm(x)
+
+  def implicit_equation(self, c):
+    return 1.0 - c[0]**2 - c[1]**2
+
+class ToroidalManifold(Manifold):
+  def __init__(self, dim):
+    assert dim == 2 # TODO.
+    self.dim = dim
+    self.ambient_dim = dim + 1
+
+    self.R = 2 
+
+    self.charts = [
+      Chart(
+        domain_center=self._from_local(np.zeros(self.dim)),
+        domain_radius=np.inf, # TODO
+        image_radius=np.inf, # TODO
+        map_=self._to_local,
+        inverse_map=self._from_local,
+        distance_function=self.distance
+      )
+    ]
+
+  def starting_state(self):
+    local = np.zeros(self.dim) 
+    return self._from_local(local)
+
+  def pdf(self, x):
+    # Uniform.
+    if True: # TODO. Check if on surface.
+      return 1 / ((2 * np.pi)**2 * self.R) # TODO. This is only valid for dim=2.
+
+  def sample(self, n):
+    if n > 1:
+      return np.array([self.sample(1) for _ in range(n)])
+    # TODO. This is wrong.
+    local = np.random.uniform(-np.pi, np.pi, 2)
+    return self._from_local(local)
+
+  def distance(self, x, y):
+    # Based on idea that cut toroidal is a cylinder... TODO. Could be wrong.
+    x_local = self._to_local(x)
+    y_local = self._to_local(y)
+
+    theta_1 = standardize_angle(y_local[0] - x_local[0])
+    theta_2 = standardize_angle(y_local[0] - x_local[0])
+    theta = np.min([theta_1, theta_2])
+    phi_1 = standardize_angle(y_local[1] - x_local[1])
+    phi_2 = standardize_angle(y_local[1] - x_local[1])
+    phi = np.min([phi_1, phi_2])
+
+    theta_distance = theta
+    phi_distance = phi * self.R 
+
+    return np.sqrt(theta_distance**2 + phi_distance**2)
+
+  def metric_tensor(self, x):
+    return np.array([
+      [(self.R + np.cos(x[1]))**2, 0],
+      [0, 1]
+    ])
+
+  def implicit_equation(self, c):
+    return np.sqrt(1.0 - (np.sqrt(c[0]**2 + c[1]**2) - self.R)**2)
+
+  def _to_local(self, c):
+    theta = np.arctan2(c[1], c[0])
+    phi = np.arctan2(c[2], np.sqrt(c[0]**2 + c[1]**2) - self.R)
+    return np.array([theta, phi])
+
+  def _from_local(self, c):
+    x = np.cos(c[0]) * (self.R + np.cos(c[1]))
+    y = np.sin(c[0]) * (self.R + np.cos(c[1]))
+    z = np.sin(c[1])
+    return np.array([x, y, z])
+
+class HyperbolicParaboloidalManifold(Manifold):
+  def __init__(self, dim):
+    assert dim == 2 # TODO.
+    self.dim = dim
+    self.ambient_dim = dim + 1
+    self.low = -1.0 
+    self.high = 1.0 
+
+  def pdf(self, x):
+    raise NotImplementedError
+
+  def sample(self, n):
+    if n > 1:
+      return np.array([self.sample(1) for _ in range(n)])
+    u, v = np.random.uniform(self.low, self.high, 2)
+    return self._from_local([u, v])
+
+  def starting_state(self):
+    raise NotImplementedError
+
+  def distance(self, x, y):
+    raise NotImplementedError
+
+  def metric_tensor(self, x):
+    raise NotImplementedError
+
+  def impicit_equation(self, c):
+    return c[0]**2 - c[1]**2
+
+  def _to_local(self, c):
+    u = c[0]
+    v = c[1]
+    return np.array([u, v])
+
+  def _from_local(self, c):
+    x = c[0]
+    y = c[1]
+    z = c[0] * c[1]
+    return np.array([x, y, z])
+
+class HyperboloidManifold(Manifold):
+  def __init__(self, dim):
+    assert dim == 2 # TODO.
+    self.dim = dim
+    self.ambient_dim = dim + 1
+
+  def pdf(self, x):
+    raise NotImplementedError
+
+  def sample(self, n):
+    if n > 1:
+      return np.array([self.sample(1) for _ in range(n)])
+    u, v = np.random.uniform(-np.pi, np.pi, 2)
+    return self._from_local([u, v])
+
+  def starting_state(self):
+    raise NotImplementedError
+
+  def distance(self, x, y):
+    raise NotImplementedError
+
+  def metric_tensor(self, x):
+    raise NotImplementedError
+
+  def implicit_equation(self):
+    return c[0]**2 + c[1]**2
+
+  def _to_local(self, c):
+    raise NotImplementedError
+
+  def _from_local(self, c):
+    x = np.sqrt(1 + c[0]**2) * np.cos(c[1])
+    y = np.sqrt(1 + c[0]**2) * np.sin(c[1])
+    z = c[0]
+    return np.array([x, y, z])

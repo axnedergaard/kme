@@ -1,6 +1,8 @@
 from OpenGL.GL import *
 import glfw
+import numpy as np
 
+from . import constant_interface
 from . import xtouch_interface
 
 
@@ -8,12 +10,14 @@ from . import xtouch_interface
 # TODO. We want the y rotation to not depend on the x rotation.
 
 class Visualizer:
-  def __init__(self):
+  def __init__(self, interface='xtouch', defaults = {}):
+    self.window_width = 1000
+    self.window_height = 1000
     self.data = {}
 
     if not glfw.init():
       print("Failed to initialize OpenGL context")
-    self.window = glfw.create_window(1000, 1000, "Visualizer", None, None)
+    self.window = glfw.create_window(self.window_width, self.window_height, "visualizer", None, None)
     glfw.make_context_current(self.window)
     glPointSize(5)
     self.x_angle = 0
@@ -23,20 +27,33 @@ class Visualizer:
     parameters = [
       ['x_angle', -180, 180],
       ['y_angle', -180, 180],
-      ['scale', 0.5, 2],
+      ['scale', 0.1, 2],
     ]
-    self.interface = xtouch_interface.XTouchInterface(parameters)
+    if interface == 'xtouch':
+      parameters = [
+        ['x_angle', -180, 180],
+        ['y_angle', -180, 180],
+        ['scale', 0.1, 2],
+      ]
+      self.interface = xtouch_interface.XTouchInterface(parameters)
+    else:
+      changes = {
+        'x_angle': 1,
+        'y_angle': 1,
+      }
+      self.interface = constant_interface.ConstantInterface(parameters, changes, defaults)
 
   def add(self, data):
     name = data['name']
+    del data['name']
+    # Pad if needed.
+    data = data.copy()
+    point_dim = data['points'].shape[1]
+    if point_dim < 3:
+      data['points'] = np.pad(data['points'], ((0,0), (0, 3-point_dim)), 'constant', constant_values=0)
+    # Add to data.
     if name not in self.data: # Create new entry.
-      data = data.copy()
-      # Pad if needed.
-      point_dim = data['points'].shape[1]
-      if point_dim < 3:
-        data['points'] = np.pad(data['points'], ((0,0), (0, 3-point_dim)), 'constant', constant_values=0)
       data['points'] = data['points'].tolist()
-      del data['name']
       self.data.update({name: data})
     else: # Update existing entry.
       self.data[name]['points'] += data['points'].tolist()
@@ -47,6 +64,7 @@ class Visualizer:
     self.data.pop(name, None)
 
   def render(self):
+    self.get_mouse_pos()
     # Get rotations from interface. 
     interface_values = self.interface.get_values()
     self.x_angle = interface_values['x_angle']
@@ -58,7 +76,6 @@ class Visualizer:
     glMatrixMode(GL_MODELVIEW)
     glPushMatrix()
     # Rotations described in quaternions, with order z-axis, y-axis, x-axis (independent of glRotatef call order).
-    # TODO. There is a bug here.
     glRotatef(self.y_angle, 0, 1, 0) 
     glRotatef(self.x_angle, 1, 0, 0) 
     glScalef(self.scale, self.scale, self.scale)
@@ -67,7 +84,7 @@ class Visualizer:
     for data in self.data.values():
       for point in data['points']:
         glColor3f(*data['color'])
-        glVertex3f(*point) # Warning, probably will throw an error since using numpy array.
+        glVertex3f(*point)
     glEnd()
     # (Rotate.)
     glPopMatrix()
@@ -82,6 +99,16 @@ class Visualizer:
     self.x_angle = x_angle
     self.y_angle = y_angle
 
-
   def set_scale(self, scale):
     self.scale = scale
+
+  def get_mouse_pos(self): 
+    x, y = glfw.get_cursor_pos(self.window)
+    #v = glfw.get_cursor_pos(self.window)
+    #import pdb; pdb.set_trace()
+    y = self.window_height - y
+    x = np.clip(x, 0, self.window_width)
+    y = np.clip(y, 0, self.window_height)
+    x = 2.0 * x / self.window_width - 1.0
+    y = 2.0 * y / self.window_height - 1.0
+    return x, y

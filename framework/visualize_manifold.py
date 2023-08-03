@@ -13,16 +13,20 @@ if __name__ == '__main__':
   sampler = {'type': 'uniform', 'low': low, 'high': high}
   #sampler = {'type': 'gaussian', 'mean': 0.0, 'std': 0.1}
   #sampler = {'type': 'vonmises_fisher', 'mu': [0, 1, 0], 'kappa': 10}
-  #man = manifold.EuclideanManifold(3, low, high, sampler)
-  man = manifold.SphericalManifold(2, sampler)
+  #man = manifold.EuclideanManifold(3, sampler)
+  #man = manifold.SphericalManifold(2, sampler)
+  man = manifold.ToroidalManifold(2)
+  #man = manifold.HyperbolicParaboloidalManifold(2, low, high)
+  #man = manifold.HyperboloidManifold(2)
+  #visualizer = visualizer.Visualizer(interface='constant', defaults={'scale': 0.25})
   visualizer = visualizer.Visualizer()
   #points = man.sample(n_samples) 
   n_samples = 0
   points = None 
   while n_samples < max_samples:
     time_start = time.time()
-    #points = man.sample(samples_per_render)
-    points = man.random_walk(samples_per_render, points[-1] if points is not None else None)
+    #points = man.sample(samples_per_render
+    points = man.random_walk(samples_per_render, points[-1] if points is not None else None, 0.2)
     n_samples += samples_per_render
     data = {'name': 'samples', 'points': points, 'color': [0, 255, 0]}
     visualizer.add(data)
