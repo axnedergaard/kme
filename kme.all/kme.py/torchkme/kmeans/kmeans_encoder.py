@@ -48,6 +48,7 @@ class KMeansEncoder:
     def update(self, state: Tensor) -> Tuple['KMeansEncoder', int]:
         # Updates the internal state of the KMeansEncoder with a new state.
         # according to algorithm (1) in https://arxiv.org/pdf/2205.15623.pdf
+        assert isinstance(state, Tensor), "State must be a torch.Tensor"
         closest_cluster_idx = self._find_closest_cluster(state)
         self._online_update_clusters(state, closest_cluster_idx)
         # CHECK. we dont have anymore access to pathological updates count here.
