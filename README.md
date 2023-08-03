@@ -7,7 +7,8 @@ https://arxiv.org/abs/2205.15623
 Experimental framework and PyTorch KME
 ```
 pip install -r requirements.txt
-cd kme.all/kme.py && pip install -e .
+# will install torchkme from GitHub or manually:
+# cd kme.all/kme.py && pip install -e .
 ```
 
 C++ KME implementation and experiments
