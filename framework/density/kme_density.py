@@ -81,10 +81,10 @@ class KMeansDensity(Density):
     def entropy(self) -> float:
         return self.rewarder._estimate_entropy_lb(self.rewarder.k_encoder).item()
 
-    def learn(self, next_state: torch.Tensor) -> None:
-        reward, _, _ = self.rewarder.infer(next_state, learn=True)
+    def learn(self, next_state: torch.Tensor) -> float:
+        reward, _, _ = self.rewarder.infer(next_state, update_encoder=True)
         return reward.item()
 
     def infer(self, next_state: torch.Tensor) -> float:
-        reward, _, _ = self.rewarder.infer(next_state, learn=False)
+        reward, _, _ = self.rewarder.infer(next_state, update_encoder=False)
         return reward.item()
