@@ -63,7 +63,7 @@ class KMERewarder:
             entropy_before: Tensor = self._estimate_entropy_lb(self.k_encoder)
         
         tmp_encoder, cluster_idx = self.k_encoder.update(next_state) \
-            if learn else self.k_encoder.sim_update(next_state)
+            if learn else self.k_encoder.sim_update_v1(next_state)
 
         if self.differential:
             entropy_after: Tensor = self._estimate_entropy_lb(tmp_encoder)
