@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 from enum import Enum
 
 import torch
@@ -34,14 +34,18 @@ class KMERewarder:
         
         if function_type not in [fn.value for fn in list(EntropicFunctionType)]:
             raise ValueError(f"Entropic function '{function_type}' not supported.")
+        
+        assert power_fn_exponent > 0, "power_fn_exponent must be greater than 0"
+        assert 0 < eps < 1, "eps must be in the range (0, 1)"
+        assert dim_actions > 0, "Dimension of environment actions must be greater than 0"
 
         # entropic fn. calculation specs
         self.differential: bool = differential
-        self.fn_type: str = function_type
+        self.fn_type: EntropicFunctionType = EntropicFunctionType(function_type)
         self.power_fn_exponent: Tensor = torch.tensor(power_fn_exponent, device=device)
         self.eps: Tensor = torch.tensor(eps, device=device)
 
-        # unused yet but maybe
+        # unused yet but maybe in future
         self.dim_states: int = dim_states
         self.dim_actions: int = dim_actions
 
@@ -52,18 +56,17 @@ class KMERewarder:
 
     # --- public interface methods ---
     
-    def infer(self, next_state: Tensor, learn: bool = True) -> tuple:
+    def infer(self, next_state: Tensor, update_encoder: bool = True) -> Tuple[Tensor, float, Tensor]:
         # Infer the reward and the number of pathological updates given the next state
-        # .BAD NAMING CONVENTION FOR LEARN PARAMETER
 
-        # make sure we port next_state to a torch tensor
-        next_state = torch.tensor(next_state, dtype=dtype, device=device)
+        if not isinstance(next_state, torch.Tensor):
+            next_state = torch.tensor(next_state, dtype=dtype, device=device)
         
         if self.differential:
             entropy_before: Tensor = self._estimate_entropy_lb(self.k_encoder)
         
         tmp_encoder, cluster_idx = self.k_encoder.update(next_state) \
-            if learn else self.k_encoder.sim_update_v1(next_state)
+            if update_encoder else self.k_encoder.sim_update_v1(next_state)
 
         if self.differential:
             entropy_after: Tensor = self._estimate_entropy_lb(tmp_encoder)
@@ -71,7 +74,7 @@ class KMERewarder:
         else:
             reward = self._estimate_entropy_lb(tmp_encoder)
 
-        return reward, 0.0, cluster_idx # no pathological updates yet.
+        return reward, 0.0, cluster_idx # no pathological updates
 
 
     # --- private interface methods ---
@@ -84,15 +87,15 @@ class KMERewarder:
 
 
     def _entropic_function(self, x: Tensor) -> Tensor:
-        if self.fn_type == EntropicFunctionType.LOG.value:
+        if self.fn_type == EntropicFunctionType.LOG:
             return torch.log(x + self.eps)
-        elif self.fn_type == EntropicFunctionType.ENTROPY.value:
+        elif self.fn_type == EntropicFunctionType.ENTROPY:
             return -x * torch.log(x + self.eps)
-        elif self.fn_type == EntropicFunctionType.EXPONENTIAL.value:
+        elif self.fn_type == EntropicFunctionType.EXPONENTIAL:
             return -torch.exp(-x)
-        elif self.fn_type == EntropicFunctionType.POWER.value:
+        elif self.fn_type == EntropicFunctionType.POWER:
             return torch.pow(x, self.power_fn_exponent)
-        elif self.fn_type == EntropicFunctionType.IDENTITY.value:
+        elif self.fn_type == EntropicFunctionType.IDENTITY:
             return x
         else:
             raise ValueError("Entropic function type not found.")
