@@ -116,7 +116,7 @@ class Manifold():
   def metric_tensor(self):
     raise NotImplementedError
 
-  def implicit_equation(self, c):
+  def implicit_function(self, c):
     raise NotImplementedError
 
 class EuclideanManifold(Manifold):
@@ -172,7 +172,7 @@ class EuclideanManifold(Manifold):
   def metric_tensor(self, x):
     return np.eye(self.dim)
 
-  def implicit_equation(self, c):
+  def implicit_function(self, c):
     if self.dim >= 3:
       raise ValueError
     else:
@@ -247,7 +247,7 @@ class SphericalManifold(Manifold):
     x = np.random.normal(0, 1, dim + 1)
     return x / np.linalg.norm(x)
 
-  def implicit_equation(self, c):
+  def implicit_function(self, c):
     return 1.0 - c[0]**2 - c[1]**2
 
 class ToroidalManifold(Manifold):
@@ -285,6 +285,7 @@ class ToroidalManifold(Manifold):
     local = np.random.uniform(-np.pi, np.pi, 2)
     return self._from_local(local)
 
+  @staticmethod
   def distance(self, x, y):
     # Based on idea that cut toroidal is a cylinder... TODO. Could be wrong.
     x_local = self._to_local(x)
@@ -308,7 +309,7 @@ class ToroidalManifold(Manifold):
       [0, 1]
     ])
 
-  def implicit_equation(self, c):
+  def implicit_function(self, c):
     return np.sqrt(1.0 - (np.sqrt(c[0]**2 + c[1]**2) - self.R)**2)
 
   def _to_local(self, c):
@@ -348,7 +349,7 @@ class HyperbolicParaboloidalManifold(Manifold):
   def metric_tensor(self, x):
     raise NotImplementedError
 
-  def impicit_equation(self, c):
+  def impicit_function(self, c):
     return c[0]**2 - c[1]**2
 
   def _to_local(self, c):
@@ -386,7 +387,7 @@ class HyperboloidManifold(Manifold):
   def metric_tensor(self, x):
     raise NotImplementedError
 
-  def implicit_equation(self):
+  def implicit_function(self):
     return c[0]**2 + c[1]**2
 
   def _to_local(self, c):
