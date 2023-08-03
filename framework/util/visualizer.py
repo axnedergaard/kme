@@ -17,9 +17,17 @@ class Visualizer:
 
     if not glfw.init():
       print("Failed to initialize OpenGL context")
+      exit(1)
+    
     self.window = glfw.create_window(self.window_width, self.window_height, "visualizer", None, None)
+    
+    if not self.window:
+      print("Failed to create GLFW window")
+      exit(1)
+
     glfw.make_context_current(self.window)
     glPointSize(5)
+    
     self.x_angle = 0
     self.y_angle = 0
     
@@ -64,6 +72,10 @@ class Visualizer:
     self.data.pop(name, None)
 
   def render(self):
+    glfw.poll_events()
+    if glfw.window_should_close(self.window):
+      glfw.terminate()
+      exit(0)
     self.get_mouse_pos()
     # Get rotations from interface. 
     interface_values = self.interface.get_values()
