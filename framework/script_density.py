@@ -1,6 +1,7 @@
 from util import visualizer
 from manifold import manifold
 from torchkme import KMeansEncoder
+import numpy as np
 import argparse
 import torch
 import time
@@ -23,8 +24,8 @@ INTERFACES = ['constant', 'xtouch']
 SAMPLING = ['rw', 'sample']
 
 # KME
-K = 100
-LR = 0.01
+K = 1
+LR = 0.5 
 BALANCING_STRENGHT = 0.1
 HOMEOSTASIS = True
 INIT_METHOD = 'zeros'
@@ -100,7 +101,8 @@ def renderloop() -> None:
 
 if __name__ == '__main__':
     args = get_args()
+    print(args)
     m = get_manifold(args)
     visualizer = visualizer.Visualizer(interface=args.interface, defaults={'scale': INTERFACE_SCALE})
-    kme_enc = KMeansEncoder(K, m.ambient_dim, LR, BALANCING_STRENGHT, HOMEOSTASIS, INIT_METHOD)
+    kme_enc = KMeansEncoder(K, m.ambient_dim, LR, BALANCING_STRENGHT, m.starting_state(), HOMEOSTASIS, INIT_METHOD)
     renderloop()

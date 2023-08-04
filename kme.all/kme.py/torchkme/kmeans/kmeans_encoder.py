@@ -15,8 +15,9 @@ class KMeansEncoder:
         dim_states: int,            # dimension of environment states (R^n)
         learning_rate: float,       # alpha - learning rate of kmeans
         balancing_strength: float,  # kappa - balancing strength of kmeans
+        man_starting_point: Tensor, # starting point of the manifold
         homeostasis: bool = True,   # homeostasis - whether to use homeostasis
-        init_method: str = 'kmeans++', # method to use for initialization of centroids
+        init_method: str = 'zeros', # method to use for initialization of centroids
     ) -> None:
         
         assert k > 0, "Number of clusters k must be greater than 0"
@@ -33,6 +34,9 @@ class KMeansEncoder:
         self.hp_learning_rate: Tensor = torch.tensor(learning_rate, dtype=dtype, device=device)
         self.hp_balancing_strength: Tensor = torch.tensor(balancing_strength, dtype=dtype, device=device)
         self.hp_homeostasis: bool = homeostasis
+
+        # manifold stuff
+        self.manifold_starting_point = torch.tensor(man_starting_point).unsqueeze(0)
 
         # internal kmeans encoder state
         self.centroids: Tensor = self._init_centroids(self.k, self.dim_states, init_method) # mu_i
@@ -65,8 +69,10 @@ class KMeansEncoder:
     # --- private interface methods ---
 
     def _init_centroids_zeros(self, k: int, dim_states: int) -> Tensor:
-        # Initializes centroids at zero
-        return torch.zeros((k, dim_states), dtype=dtype, device=device)
+        # Initializes centroids at starting state of the manifold.
+        # centroids = torch.zeros((k, dim_states), dtype=dtype, device=device)
+        centroids = self.manifold_starting_point.repeat(k, 1)
+        return centroids
     
 
     def _init_centroids_kmeans_plus_plus(self, k: int, dim_states: int, samples: int = 1000) -> Tensor:
