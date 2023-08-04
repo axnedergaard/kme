@@ -1,11 +1,13 @@
 import numpy as np
 import scipy
+import gymnasium
 
 # TODO. Sampling multiple points in one call for Euclidean and Spherical.
-# TODO. Proper definition of state and action space.
 # TODO. Proper implementation of hypersphere and torus (support d!=2 and use multiple charts to avoid singularities.
 # TODO. Fix sampling in torus.
 # TODO. Confirm distance function on torus.
+# TODO. Bug with point in center of torus.
+# TODO. Rename classes.
 
 def standardize_angle(x):
   x = x % (2 * np.pi)
@@ -56,18 +58,27 @@ class Chart():
     return EuclideanManifold.distance(x, self.image_center) < self.image_radius
 
 #class Manifold(Environment, Density, Distance):
-class Manifold():
-  def __init__(self):
+class Manifold(gymnasium.Env):
+  def __init__(self, dim, ambient_dim):
+    self.dim = dim
+    self.ambient_dim = ambient_dim 
     self.max_step_size = 0.01 # TODO.
+    self.observation_space = gymnasium.spaces.Box(low=-1.0, high=1.0, shape=[self.ambient_dim]) 
+    self.action_space = gymnasium.spaces.Box(low=-1.0, high=1.0, shape=[self.dim])
 
-  def reset(self):
+  def reset(self, seed=None):
     self.state = self.starting_state()
-    return self.state.copy()
+    info = {}
+    return self.state.copy(), info
   
   def step(self, action):
     # Warning: Undefined behavior if reset not called before this.
     self.state = self._manifold_step(self.state, action, self.max_step_size)
-    return self.state.copy()
+    reward = 0.0
+    terminated = False
+    truncated = False
+    info = {}
+    return self.state.copy(), reward, terminated, truncated, info
 
   def random_walk(self, n, starting_state=None, step_size=None):
     state = starting_state if starting_state is not None else self.starting_state() 
@@ -121,14 +132,9 @@ class Manifold():
 
 class EuclideanManifold(Manifold):
   def __init__(self, dim, sampler):
-    super(EuclideanManifold, self).__init__()
-
-    self.dim = dim
-    self.ambient_dim = dim
+    super(EuclideanManifold, self).__init__(dim, dim)
     self.low = -1.0 
     self.high = 1.0 
-    self.state_dim = dim
-    self.action_dim = dim
     self.sampler = sampler 
 
     self.charts = [
@@ -182,11 +188,7 @@ class SphericalManifold(Manifold):
   # We assume unit radius.
   def __init__(self, dim, sampler):
     assert dim == 2 # TODO.
-    super(SphericalManifold, self).__init__()
-    self.dim = dim
-    self.ambient_dim = dim + 1
-    self.state_dim = self.ambient_dim
-    self.action_dim = self.dim
+    super(SphericalManifold, self).__init__(dim, dim + 1)
     self.sampler = sampler
 
     # TODO. Right now this only works for dim=2 and has a singular point.
@@ -254,8 +256,7 @@ class SphericalManifold(Manifold):
 class ToroidalManifold(Manifold):
   def __init__(self, dim):
     assert dim == 2 # TODO.
-    self.dim = dim
-    self.ambient_dim = dim + 1
+    super(ToroidalManifold, self).__init__(dim, dim)
 
     self.r = 1/3 # Radius of "inner" sphere. 
     self.R = 2/3 # Radius of "outer" sphere.
@@ -327,8 +328,7 @@ class ToroidalManifold(Manifold):
 class HyperbolicParaboloidalManifold(Manifold):
   def __init__(self, dim):
     assert dim == 2 # TODO.
-    self.dim = dim
-    self.ambient_dim = dim + 1
+    super(HyperbolicParaboloidalManifold, self).__init__(dim, dim + 1)
     self.low = -1.0 
     self.high = 1.0 
 
@@ -367,8 +367,7 @@ class HyperbolicParaboloidalManifold(Manifold):
 class HyperboloidManifold(Manifold):
   def __init__(self, dim):
     assert dim == 2 # TODO.
-    self.dim = dim
-    self.ambient_dim = dim + 1
+    super(HyperboloidManifold, self).__init__(dim, dim + 1)
     self.a = 2**-0.5
     self.c = 1.0 
 
