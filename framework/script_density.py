@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 # VISUALIZER
-SAMLPES_PER_RENDER = 1
+SAMLPES_PER_RENDER = 50
 MAX_SAMPLES_EXPERIMENT = 1e9
 MIN_TIME_RENDER = 0.01
 INTERFACE_SCALE = 0.25
@@ -24,7 +24,7 @@ INTERFACES = ['constant', 'xtouch']
 SAMPLING = ['rw', 'sample']
 
 # KME
-K = 1
+K = 300
 LR = 0.5 
 BALANCING_STRENGHT = 0.1
 HOMEOSTASIS = True

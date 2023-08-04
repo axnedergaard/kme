@@ -49,15 +49,13 @@ class KMeansEncoder:
     def clone(self) -> 'KMeansEncoder':
         return copy.deepcopy(self)
 
-    def update(self, state: Tensor) -> Tuple['KMeansEncoder', int]:
+    def update(self, states: Tensor) -> Tuple['KMeansEncoder', int]:
         # Updates the internal state of the KMeansEncoder with a new state.
         # according to algorithm (1) in https://arxiv.org/pdf/2205.15623.pdf
-        assert isinstance(state, Tensor), "State must be a torch.Tensor"
-        closest_cluster_idx = self._find_closest_cluster(state)
-        self._online_update_clusters(state, closest_cluster_idx)
-        # CHECK. we dont have anymore access to pathological updates count here.
-        # Note: We might want to handle empty clusters here eg. re-init them randomly
-        self.closest_distances = self._dist_to_clusters(state, self._euclidean_dist)
+        assert isinstance(states, Tensor), "States must be torch.Tensor"
+        assert states.dim() == 2, "States must be batched (B, dim_states)"
+        shuffled_states = states[torch.randperm(states.size(0))]
+        closest_cluster_idx = [self._update_single(s) for s in shuffled_states]
         return self, closest_cluster_idx
 
 
@@ -67,6 +65,21 @@ class KMeansEncoder:
 
 
     # --- private interface methods ---
+
+    def _update_single(self, state: Tensor) -> int:
+        # Updates the internal state of the KMeansEncoder with a new state.
+        # according to algorithm (1) in https://arxiv.org/pdf/2205.15623.pdf
+
+        assert isinstance(state, Tensor), "State must be torch.Tensor"
+        assert state.dim() == 1, "State must be a single state (dim_states,)"
+
+        closest_cluster_idx = self._find_closest_cluster(state)
+        self._online_update_clusters(state, closest_cluster_idx)
+        # CHECK. we dont have anymore access to pathological updates count here.
+        # Note: We might want to handle empty clusters here eg. re-init them randomly
+        self.closest_distances = self._dist_to_clusters(state, self._euclidean_dist)
+        
+        return closest_cluster_idx
 
     def _init_centroids_zeros(self, k: int, dim_states: int) -> Tensor:
         # Initializes centroids at starting state of the manifold.
