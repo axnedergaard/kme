@@ -166,7 +166,7 @@ class EuclideanManifold(Manifold):
       return np.random.normal(self.sampler['mean'], self.sampler['std'], self.dim)
 
   @staticmethod
-  def distance(self, x, y):
+  def distance(x, y):
     return np.linalg.norm(x - y)
 
   def metric_tensor(self, x):
@@ -223,7 +223,7 @@ class SphericalManifold(Manifold):
       return scipy.stats.vonmises_fisher.rvs(self.sampler['mu'], self.sampler['kappa'], size=1)[0]
       
   @staticmethod
-  def distance(self, x, y):
+  def distance(x, y):
     return np.arccos(np.dot(x, y))
 
   def metric_tensor(self, x):
@@ -286,7 +286,6 @@ class ToroidalManifold(Manifold):
     local = np.random.uniform(-np.pi, np.pi, 2)
     return self._from_local(local)
 
-  @staticmethod
   def distance(self, x, y):
     # Based on idea that cut toroidal is a cylinder... TODO. Could be wrong.
     x_local = self._to_local(x)

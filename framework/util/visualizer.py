@@ -17,7 +17,8 @@ class Visualizer:
     self.window_height = 1000
     self.max_points = 1000
     self.manifold = manifold
-    self.distance = lambda x, y: manifold.distance(manifold, x, y) if distance is None and manifold is not None else distance
+    #self.distance = lambda x, y: manifold.distance(manifold, x, y) if distance is None and manifold is not None else distance
+    self.distance = manifold.distance if distance is None and manifold is not None else distance
     self.cursor = cursor
     self.data = {}
 
