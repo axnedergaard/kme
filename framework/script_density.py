@@ -28,7 +28,7 @@ K = 300
 LR = 0.5 
 BALANCING_STRENGHT = 0.1
 HOMEOSTASIS = True
-INIT_METHOD = 'zeros'
+INIT_METHOD = 'uniform'
 
 
 def get_args() -> argparse.Namespace:

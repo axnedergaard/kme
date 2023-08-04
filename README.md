@@ -51,8 +51,8 @@ Please refer to the paper for parameter values.
 
 # To-Dos
 
-- [] Add initialization techniques to Online KMeans @ap
 - [x] Handle batches in Online KMeans (w/ shuffling) @ap
+- [x] Add initialization techniques to Online KMeans @ap
 - [] Optimize calls for batches and matmuls @ap
 - [] Fix bug of point spwaning at (0) in viz @xan
 - [] Fix vizualizer to handle any np.array shape @xan

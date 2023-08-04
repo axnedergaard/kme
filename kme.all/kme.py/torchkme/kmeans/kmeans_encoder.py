@@ -15,16 +15,16 @@ class KMeansEncoder:
         dim_states: int,            # dimension of environment states (R^n)
         learning_rate: float,       # alpha - learning rate of kmeans
         balancing_strength: float,  # kappa - balancing strength of kmeans
-        man_starting_point: Tensor, # starting point of the manifold
+        man_starting_point: Tensor = None, # starting point of the manifold
         homeostasis: bool = True,   # homeostasis - whether to use homeostasis
-        init_method: str = 'zeros', # method to use for initialization of centroids
+        init_method: str = 'uniform', # method to use for initialization of centroids
     ) -> None:
         
         assert k > 0, "Number of clusters k must be greater than 0"
         assert dim_states > 0, "Dimension of environment states must be greater than 0"
         assert 0 < learning_rate <= 1, "Learning rate must be in the range (0, 1]"
         assert balancing_strength >= 0, "Balancing strength must be non-negative"
-        assert init_method in ['kmeans++', 'zeros'], "Initialization method is not supported"
+        assert init_method in ['uniform', 'zeros'], "Initialization method is not supported"
 
         # kmeans specs
         self.k: int = k
@@ -36,7 +36,8 @@ class KMeansEncoder:
         self.hp_homeostasis: bool = homeostasis
 
         # manifold stuff
-        self.manifold_starting_point = torch.tensor(man_starting_point).unsqueeze(0)
+        self.manifold_starting_point = torch.tensor(man_starting_point).unsqueeze(0) \
+            if man_starting_point is not None else torch.zeros((1, self.dim_states), dtype=dtype, device=device)
 
         # internal kmeans encoder state
         self.centroids: Tensor = self._init_centroids(self.k, self.dim_states, init_method) # mu_i
@@ -81,34 +82,13 @@ class KMeansEncoder:
         
         return closest_cluster_idx
 
-    def _init_centroids_zeros(self, k: int, dim_states: int) -> Tensor:
-        # Initializes centroids at starting state of the manifold.
-        # centroids = torch.zeros((k, dim_states), dtype=dtype, device=device)
-        centroids = self.manifold_starting_point.repeat(k, 1)
-        return centroids
-    
-
-    def _init_centroids_kmeans_plus_plus(self, k: int, dim_states: int, samples: int = 1000) -> Tensor:
-        # Initializes centroids using kmeans++ algorithm
-        # first sample centroid randomly from a standard normal distribution
-        centroids = torch.randn((1, dim_states), dtype=dtype, device=device)
-        for i in range(1, k):
-            # fit centroids to a mixture of normal distributions
-            sample_points = torch.randn((samples, dim_states), dtype=dtype, device=device)
-            distances = torch.min(self._euclidean_dist(sample_points.unsqueeze(1), centroids.unsqueeze(0), dim=-1), dim=1)[0]
-            probabilities = distances / torch.sum(distances)
-            new_centroid_idx = torch.multinomial(probabilities, 1)
-            new_centroid = sample_points[new_centroid_idx].view(1, dim_states)
-            centroids = torch.cat((centroids, new_centroid), dim=0)
-        return centroids
-    
-
     def _init_centroids(self, k: int, dim_states: int, method: str = 'kmeans++') -> Tensor:
-        # Initializes centroids according to a given method.
         if method == 'zeros':
-            return self._init_centroids_zeros(k, dim_states)
-        elif method == 'kmeans++':
-            return self._init_centroids_kmeans_plus_plus(k, dim_states)
+            # Initializes centroids at starting state of the manifold else (0)
+            return self.manifold_starting_point.repeat(k, 1)
+        elif method == 'uniform':
+            # Initializes centroids randomly from a uniform distribution in [-1, 1]^n
+            return 2 * torch.rand((k, dim_states), dtype=dtype, device=device) - 1
         else:
             raise ValueError("Invalid initialization method. Choose 'zeros' or 'kmeans++'")
     
