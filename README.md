@@ -48,3 +48,14 @@ python train.py --help
 ```
 
 Please refer to the paper for parameter values. 
+
+# To-Dos
+
+- [] Add initialization techniques to Online KMeans @ap
+- [] Handle batches in Online KMeans (w/ shuffling) @ap
+- [] Optimize calls for batches and matmuls @ap
+- [] Fix bug of point spwaning at (0) in viz @xan
+- [] Fix vizualizer to handle any np.array shape @xan
+- [] Write down skeleton of rl experiment script @xan
+- [] Restructure repository according to rl exp @both
+- [] Lay down clear plan for all experiments in paper @both
