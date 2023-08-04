@@ -257,7 +257,8 @@ class ToroidalManifold(Manifold):
     self.dim = dim
     self.ambient_dim = dim + 1
 
-    self.R = 2 
+    self.r = 1/3 # Radius of "inner" sphere. 
+    self.R = 2/3 # Radius of "outer" sphere.
 
     self.charts = [
       Chart(
@@ -277,7 +278,7 @@ class ToroidalManifold(Manifold):
   def pdf(self, x):
     # Uniform.
     if True: # TODO. Check if on surface.
-      return 1 / ((2 * np.pi)**2 * self.R) # TODO. This is only valid for dim=2.
+      return 1 / ((2 * np.pi * self.r)**2 * self.R) # TODO. This is only valid for dim=2.
 
   def sample(self, n):
     if n > 1:
@@ -298,29 +299,29 @@ class ToroidalManifold(Manifold):
     phi_2 = standardize_angle(y_local[1] - x_local[1])
     phi = np.min([phi_1, phi_2])
 
-    theta_distance = theta
+    theta_distance = theta * self.r
     phi_distance = phi * self.R 
 
     return np.sqrt(theta_distance**2 + phi_distance**2)
 
   def metric_tensor(self, x):
     return np.array([
-      [(self.R + np.cos(x[1]))**2, 0],
-      [0, 1]
+      [(self.R + self.r * np.cos(x[1]))**2, 0],
+      [0, self.r ** 2]
     ])
 
   def implicit_function(self, c):
-    return np.sqrt(1.0 - (np.sqrt(c[0]**2 + c[1]**2) - self.R)**2)
+    return np.sqrt(self.r**2 - (np.sqrt(c[0]**2 + c[1]**2) - self.R)**2)
 
   def _to_local(self, c):
     theta = np.arctan2(c[1], c[0])
-    phi = np.arctan2(c[2], np.sqrt(c[0]**2 + c[1]**2) - self.R)
+    phi = np.arctan2(c[2], (np.sqrt(c[0]**2 + c[1]**2) - self.R) / self.r)
     return np.array([theta, phi])
 
   def _from_local(self, c):
-    x = np.cos(c[0]) * (self.R + np.cos(c[1]))
-    y = np.sin(c[0]) * (self.R + np.cos(c[1]))
-    z = np.sin(c[1])
+    x = (self.R + self.r * np.cos(c[1])) * np.cos(c[0])
+    y =  (self.R + self.r * np.cos(c[1])) * np.sin(c[0])
+    z = self.r * np.sin(c[1])
     return np.array([x, y, z])
 
 class HyperbolicParaboloidalManifold(Manifold):
@@ -368,6 +369,8 @@ class HyperboloidManifold(Manifold):
     assert dim == 2 # TODO.
     self.dim = dim
     self.ambient_dim = dim + 1
+    self.a = 2**-0.5
+    self.c = 1.0 
 
   def pdf(self, x):
     raise NotImplementedError
@@ -375,7 +378,8 @@ class HyperboloidManifold(Manifold):
   def sample(self, n):
     if n > 1:
       return np.array([self.sample(1) for _ in range(n)])
-    u, v = np.random.uniform(-np.pi, np.pi, 2)
+    u = np.random.uniform(-1.0, 1.0)
+    v = np.random.uniform(-np.pi, np.pi)
     return self._from_local([u, v])
 
   def starting_state(self):
@@ -394,7 +398,7 @@ class HyperboloidManifold(Manifold):
     raise NotImplementedError
 
   def _from_local(self, c):
-    x = np.sqrt(1 + c[0]**2) * np.cos(c[1])
-    y = np.sqrt(1 + c[0]**2) * np.sin(c[1])
-    z = c[0]
+    x = self.a * np.sqrt(1 + c[0]**2) * np.cos(c[1])
+    y = self.a * np.sqrt(1 + c[0]**2) * np.sin(c[1])
+    z = self.c * c[0]
     return np.array([x, y, z])
