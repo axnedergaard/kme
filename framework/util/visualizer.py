@@ -1,6 +1,7 @@
 from OpenGL.GL import *
 import glfw
 import numpy as np
+from scipy.spatial.transform import Rotation as scipy_rotation 
 
 from . import constant_interface
 from . import xtouch_interface
@@ -8,11 +9,14 @@ from . import xtouch_interface
 
 # TODO. Interface sometimes crashes for unknown reason.
 # TODO. We want the y rotation to not depend on the x rotation.
+# TODO. Optimize this by using a buffer. 
 
 class Visualizer:
-  def __init__(self, interface='xtouch', defaults = {}):
+  def __init__(self, interface='xtouch', defaults = {}, manifold=None, cursor=False):
     self.window_width = 1000
     self.window_height = 1000
+    self.manifold = manifold
+    self.cursor = cursor
     self.data = {}
 
     if not glfw.init():
@@ -30,6 +34,7 @@ class Visualizer:
     
     self.x_angle = 0
     self.y_angle = 0
+    self.scale = 0
     
     # Create interface.
     parameters = [
@@ -76,7 +81,6 @@ class Visualizer:
     if glfw.window_should_close(self.window):
       glfw.terminate()
       exit(0)
-    self.get_mouse_pos()
     # Get rotations from interface. 
     interface_values = self.interface.get_values()
     self.x_angle = interface_values['x_angle']
@@ -87,17 +91,22 @@ class Visualizer:
     # Rotate.
     glMatrixMode(GL_MODELVIEW)
     glPushMatrix()
-    # Rotations described in quaternions, with order z-axis, y-axis, x-axis (independent of glRotatef call order).
-    glRotatef(self.y_angle, 0, 1, 0) 
-    glRotatef(self.x_angle, 1, 0, 0) 
-    glScalef(self.scale, self.scale, self.scale)
+    #glRotatef(self.y_angle, 0, 1, 0) 
+    #glRotatef(self.x_angle, 1, 0, 0) 
+    #glScalef(self.scale, self.scale, self.scale)
     # Draw.
+    transformation_matrix = self.scale * scipy_rotation.from_euler('yx', [self.y_angle, self.x_angle], degrees=True).as_matrix()
     glBegin(GL_POINTS)
     for data in self.data.values():
-      for point in data['points']:
+      points = np.matmul(data['points'], transformation_matrix)
+      for point in points: 
         glColor3f(*data['color'])
-        glVertex3f(*point)
+        glVertex3f(*point) 
     glEnd()
+    if self.cursor: 
+      # Renderer closest point to mouse. 
+      points = np.matmul(self.data['samples']['points'], transformation_matrix) # TODO. It's quite inefficient that we do this multiplication twice. 
+      self.render_closest_point(points, color=[0, 0, 255])
     # (Rotate.)
     glPopMatrix()
     # Render.
@@ -113,6 +122,24 @@ class Visualizer:
 
   def set_scale(self, scale):
     self.scale = scale
+
+  def render_closest_point(self, points, color):
+    x, y = self.get_mouse_pos()
+    closest_point = None
+    closest_distance = np.inf
+    for point in points: 
+      #distance = self.manifold.distance(mouse_projected, point)
+      distance = np.linalg.norm(np.array([x, y]) - np.array(point[:2]))
+      if distance < closest_distance:
+        closest_distance = distance
+        closest_point = point
+    if closest_point is not None:
+      glPointSize(20)
+      glBegin(GL_POINTS)
+      glColor3f(0, 0, 255)
+      glVertex3f(*closest_point)
+      glEnd()
+      glPointSize(5)
 
   def get_mouse_pos(self): 
     x, y = glfw.get_cursor_pos(self.window)
