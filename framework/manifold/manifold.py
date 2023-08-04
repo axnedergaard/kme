@@ -166,7 +166,7 @@ class EuclideanManifold(Manifold):
       return np.random.normal(self.sampler['mean'], self.sampler['std'], self.dim)
 
   @staticmethod
-  def distance(x, y):
+  def distance(self, x, y):
     return np.linalg.norm(x - y)
 
   def metric_tensor(self, x):
@@ -222,6 +222,7 @@ class SphericalManifold(Manifold):
     elif self.sampler['type'] == 'vonmises_fisher':
       return scipy.stats.vonmises_fisher.rvs(self.sampler['mu'], self.sampler['kappa'], size=1)[0]
       
+  @staticmethod
   def distance(self, x, y):
     return np.arccos(np.dot(x, y))
 

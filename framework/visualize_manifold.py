@@ -18,8 +18,8 @@ if __name__ == '__main__':
   man = manifold.ToroidalManifold(2)
   #man = manifold.HyperbolicParaboloidalManifold(2)
   #man = manifold.HyperboloidManifold(2)
-  visualizer = visualizer.Visualizer(interface='constant', defaults={'scale': 0.25})
-  #visualizer = visualizer.Visualizer(manifold=man)
+  #visualizer = visualizer.Visualizer(interface='constant', defaults={'scale': 0.25})
+  visualizer = visualizer.Visualizer(manifold=man, cursor=True)
   #points = man.sample(n_samples) 
   n_samples = 0
   points = None 
