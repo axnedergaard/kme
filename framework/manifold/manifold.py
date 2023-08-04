@@ -256,7 +256,7 @@ class SphericalManifold(Manifold):
 class ToroidalManifold(Manifold):
   def __init__(self, dim):
     assert dim == 2 # TODO.
-    super(ToroidalManifold, self).__init__(dim, dim)
+    super(ToroidalManifold, self).__init__(dim, dim + 1)
 
     self.r = 1/3 # Radius of "inner" sphere. 
     self.R = 2/3 # Radius of "outer" sphere.
