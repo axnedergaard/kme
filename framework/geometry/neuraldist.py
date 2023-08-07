@@ -59,14 +59,21 @@ class NeuralDistance(Geometry):
 
     def distance(self, x: Tensor, y: Tensor, d: Callable = None) -> FloatTensor:
         x, y = self._port_to_tensor(x), self._port_to_tensor(y)
-
+        
         assert x.dim() in [1, 2] and y.dim() in [1, 2] # (ambient_dim,) or (B, ambient_dim)
         x, y = x.unsqueeze(0) if x.dim() == 1 else x, y.unsqueeze(0) if y.dim() == 1 else y # (B, ambient_dim)
-        concatenated = torch.cat((x, y), dim=0) # concat along batch dimension (2B, ambient_dim)
-
-        embeddings = self.network(concatenated) # (2B, embedding_dim)
-        embedded_x, embedded_y = torch.chunk(embeddings, 2, dim=0) # (B, embedding_dim)
-        d = self.euclidean if d is None else d
+        
+        if x.shape == y.shape: # (B, ambient_dim) vs (B, ambient_dim)
+            concatenated = torch.cat((x, y), dim=0) # (2B, ambient_dim)
+            embeddings = self.network(concatenated) # (2B, embedding_dim)
+            embedded_x, embedded_y = torch.chunk(embeddings, 2, dim=0) # (B, embedding_dim)
+            d = self.euclidean if d is None else d
+        
+        else: # kmeans optim: (1, ambient_dim) vs (B, ambient_dim)
+            concatenated = torch.cat((x, y), dim=0) # (B+1, ambient_dim)
+            embeddings = self.network(concatenated) # (B+1, embedding_dim)
+            embedded_x, embedded_y = embeddings[:1], embeddings[1:] # (1, embedding_dim), (B, embedding_dim)
+            d = self.euclidean if d is None else d
 
         return d(embedded_x, embedded_y) # (B,)
 
@@ -100,8 +107,7 @@ class NeuralDistance(Geometry):
     
     def euclidean(self, x: Tensor, y: Tensor) -> FloatTensor:
         assert x.dim() == y.dim() == 2 # (B, ambient_dim)
-        return torch.norm(x - y, p=2, dim=1)
-    
+        return torch.norm(x - y, p=2, dim=1) # (B,)
 
     def _port_to_tensor(self, input: Union[np.ndarray, Tensor]) -> Tensor:
         if isinstance(input, np.ndarray):

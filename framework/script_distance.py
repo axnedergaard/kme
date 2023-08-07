@@ -114,7 +114,7 @@ if __name__ == '__main__':
     m = get_manifold(args)
     d = NeuralDistance(m.ambient_dim, [64, 64], 32)
     visualizer = visualizer.Visualizer(interface=args.interface, defaults={'scale': INTERFACE_SCALE})
-    kmeans = OnlineKMeansEstimator(K, m.ambient_dim, LR, BALANCING_STRENGHT, origin=m.starting_state(), init_method=INIT_METHOD)
+    kmeans = OnlineKMeansEstimator(K, m.ambient_dim, LR, BALANCING_STRENGHT, origin=m.starting_state(), init_method=INIT_METHOD, distance_func=d)
 
     x_ref, y_ref = m.sample(1), m.sample(1)
     visualizer.add({'name': 'references', 'points': np.array([x_ref, y_ref]), 'color': [255, 255, 255]})
