@@ -114,7 +114,8 @@ class Visualizer:
     glBegin(GL_POINTS)
     for name in self.data:
       data = self.data[name]
-      points = np.matmul(data['points'], transformation_matrix)
+      n_points = data['n_points']
+      points = np.matmul(data['points'][:n_points], transformation_matrix)
       colors = None
       if name == 'samples' and self.cursor and self.distance is not None:
         colors = self.compute_colors(points, data['color']).tolist()
