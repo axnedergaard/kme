@@ -55,9 +55,9 @@ Please refer to the paper for parameter values.
 - [x] Add initialization techniques to kmeans @ap
 - [x] Implement Density, OnlineEstimators and KMeans @ap
 - [] Fix logic flaw on kmeans encoder for distances @ap
-- [] Optimize calls for batches and matmuls @ap
-- [] Fix bug of point spwaning at (0) in viz @xan
+- [x] Optimize calls for batches and matmuls @ap
+- [x] Fix bug of point spwaning at (0) in viz @xan
 - [] Fix vizualizer to handle any np.array shape @xan
-- [] Write down skeleton of rl experiment script @xan
-- [] Restructure repository according to rl exp @both
+- [x] Write down skeleton of rl experiment script @xan
+- [x] Restructure repository according to rl exp @both
 - [] Lay down clear plan for all experiments in paper @both
