@@ -1,6 +1,7 @@
 from util import visualizer
 from manifold import manifold
-from distance.distance import NeuralDistance
+from density import OnlineKMeansEstimator
+from geometry import NeuralDistance
 import numpy as np
 import argparse
 import torch
@@ -9,11 +10,10 @@ import logging
 
 logging.basicConfig(level=logging.DEBUG)
 
-
 # VISUALIZER
-SAMLPES_PER_RENDER = 1
+SAMLPES_PER_RENDER = 20
 MAX_SAMPLES_EXPERIMENT = 1e9
-MIN_TIME_RENDER = 0.01
+MIN_TIME_RENDER = 0.05
 INTERFACE_SCALE = 0.25
 RW_STEP_SIZE = 0.2
 
@@ -24,18 +24,18 @@ INTERFACES = ['constant', 'xtouch']
 SAMPLING = ['rw', 'sample']
 
 # KME
-K = 1
+K = 300
 LR = 0.5 
 BALANCING_STRENGHT = 0.1
 HOMEOSTASIS = True
-INIT_METHOD = 'zeros'
+INIT_METHOD = 'uniform'
 
 
 def get_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     # 1/ manifolds related arguments
     parser.add_argument('--manifold', '-m', type=str, default='toroidal', choices=MANIFOLDS)
-    parser.add_argument('--sampler', '-s', type=str, default='gaussian', choices=SAMPLERS)
+    parser.add_argument('--sampler', '-s', type=str, default='uniform', choices=SAMPLERS)
     parser.add_argument('--sampling-type', type=str, default='rw', choices=SAMPLING)
     parser.add_argument('--dim', '-d', type=int, default=2)
     # 2/ visualization related arguments
@@ -68,7 +68,7 @@ def get_manifold(args: argparse.Namespace) -> manifold.Manifold:
     elif args.manifold == 'toroidal':
         m = manifold.ToroidalManifold(args.dim)
     elif args.manifold == 'hyperpara':
-        m = manifold.HyperbolicParaboloidalManifold(args.dim, -1.0, 1.0)
+        m = manifold.HyperbolicParaboloidalManifold(args.dim)
     elif args.manifold == 'hyperboloid':
         m = manifold.HyperboloidManifold(args.dim)
 
@@ -87,11 +87,13 @@ def renderloop() -> None:
             points = m.random_walk(SAMLPES_PER_RENDER, points[-1] if points is not None else None, RW_STEP_SIZE)
         
         d.learn(points)
-        print(m.distance(x_ref, y_ref), d.compute(x_ref, y_ref).detach())
-
+        print(m.distance(x_ref, y_ref), d(x_ref, y_ref))
+        kmeans.update(torch.tensor(points))
         num_samples += SAMLPES_PER_RENDER
         state_points = {'name': 'samples', 'points': points, 'color': [0, 255, 0]}
+        centroids = {'name': 'centroids', 'points': kmeans.centroids, 'color': [255, 0, 0]}
         visualizer.add(state_points)
+        visualizer.add(centroids)
         visualizer.render()
         time_end = time.time()
         time_elapsed = time_end - time_start
@@ -103,9 +105,12 @@ if __name__ == '__main__':
     args = get_args()
     print(args)
     m = get_manifold(args)
-    d = NeuralDistance(m.ambient_dim)
+    d = NeuralDistance(m.ambient_dim, [64, 64], 32)
     visualizer = visualizer.Visualizer(interface=args.interface, defaults={'scale': INTERFACE_SCALE})
+    kmeans = OnlineKMeansEstimator(K, m.ambient_dim, LR, BALANCING_STRENGHT, origin=m.starting_state(), init_method=INIT_METHOD)
+
     x_ref, y_ref = m.sample(1), m.sample(1)
     visualizer.add({'name': 'references', 'points': np.array([x_ref, y_ref]), 'color': [255, 255, 255]})
     x_ref, y_ref = torch.tensor(x_ref, dtype=torch.float), torch.tensor(y_ref, dtype=torch.float)
+
     renderloop()
