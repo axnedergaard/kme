@@ -12,6 +12,9 @@ class OnlineEstimator(Density):
         self.device = device
         self.dtype = dtype
 
+    def __call__(self, states, learn: True) -> LongTensor:
+        return self.update(states) if learn else self.sim_update(states)
+
     def update(self, states: Tensor) -> LongTensor:
         raise NotImplementedError()
     

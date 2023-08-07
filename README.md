@@ -54,10 +54,12 @@ Please refer to the paper for parameter values.
 - [x] Handle batches in online kmeans (w/ shuffling) @ap
 - [x] Add initialization techniques to kmeans @ap
 - [x] Implement Density, OnlineEstimators and KMeans @ap
-- [] Fix logic flaw on kmeans encoder for distances @ap
 - [x] Optimize calls for batches and matmuls @ap
 - [x] Fix bug of point spwaning at (0) in viz @xan
-- [] Fix vizualizer to handle any np.array shape @xan
 - [x] Write down skeleton of rl experiment script @xan
 - [x] Restructure repository according to rl exp @both
+- [x] Fix logic flaw on kmeans encoder for distances @ap
+- [] Reorder manifolds classes @ap
+- [] Add online knn density estimator @ap
+- [] Fix vizualizer to handle any np.array shape @xan
 - [] Lay down clear plan for all experiments in paper @both
