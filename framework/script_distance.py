@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.DEBUG)
 # VISUALIZER
 SAMLPES_PER_RENDER = 20
 MAX_SAMPLES_EXPERIMENT = 1e9
-MIN_TIME_RENDER = 0.05
+MIN_TIME_RENDER = 0.035
 INTERFACE_SCALE = 0.25
 RW_STEP_SIZE = 0.2
 
@@ -87,12 +87,13 @@ def renderloop() -> None:
             points = m.random_walk(SAMLPES_PER_RENDER, points[-1] if points is not None else None, RW_STEP_SIZE)
         
         d.learn(points)
-        print(m.distance(x_ref, y_ref), d(x_ref, y_ref))
+        print(d(x_ref, y_ref))
         kmeans.update(torch.tensor(points))
         num_samples += SAMLPES_PER_RENDER
         state_points = {'name': 'samples', 'points': points, 'color': [0, 255, 0]}
         centroids = {'name': 'centroids', 'points': kmeans.centroids, 'color': [255, 0, 0]}
         visualizer.add(state_points)
+        if K > 3: visualizer.remove('centroids')
         visualizer.add(centroids)
         visualizer.render()
         time_end = time.time()
