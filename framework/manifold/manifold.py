@@ -342,7 +342,7 @@ class HyperbolicParaboloidalManifold(Manifold):
     return self._from_local([u, v])
 
   def starting_state(self):
-    raise NotImplementedError
+    return np.zeros(self.ambient_dim)
 
   def distance(self, x, y):
     raise NotImplementedError
@@ -369,7 +369,7 @@ class HyperboloidManifold(Manifold):
     assert dim == 2 # TODO.
     super(HyperboloidManifold, self).__init__(dim, dim + 1)
     self.a = 2**-0.5
-    self.c = 1.0 
+    self.c = 1.0
 
   def pdf(self, x):
     raise NotImplementedError
@@ -382,7 +382,7 @@ class HyperboloidManifold(Manifold):
     return self._from_local([u, v])
 
   def starting_state(self):
-    raise NotImplementedError
+    return np.zeros(self.ambient_dim)
 
   def distance(self, x, y):
     raise NotImplementedError
@@ -391,7 +391,7 @@ class HyperboloidManifold(Manifold):
     raise NotImplementedError
 
   def implicit_function(self):
-    return c[0]**2 + c[1]**2
+    return self.c[0]**2 + self.c[1]**2
 
   def _to_local(self, c):
     raise NotImplementedError
