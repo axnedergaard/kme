@@ -76,6 +76,7 @@ def get_manifold(args: argparse.Namespace) -> manifold.Manifold:
 def renderloop() -> None:
     num_samples = 0
     points = None
+
     while num_samples < MAX_SAMPLES_EXPERIMENT:
         time_start = time.time()
         
@@ -84,14 +85,17 @@ def renderloop() -> None:
         elif args.sampling_type == 'rw':
             points = m.random_walk(SAMLPES_PER_RENDER, points[-1] if points is not None else None, RW_STEP_SIZE)
         
-        kmeans.update(torch.tensor(points))
-        num_samples += SAMLPES_PER_RENDER
         state_points = {'name': 'samples', 'points': points, 'color': [0, 255, 0]}
         centroids = {'name': 'centroids', 'points': kmeans.centroids, 'color': [255, 0, 0]}
-        visualizer.add(state_points)
+        
+        num_samples += SAMLPES_PER_RENDER
         if K > 3: visualizer.remove('centroids')
+        visualizer.add(state_points)
         visualizer.add(centroids)
         visualizer.render()
+        
+        kmeans.update(torch.tensor(points))
+
         time_end = time.time()
         time_elapsed = time_end - time_start
         if time_elapsed < MIN_TIME_RENDER:
