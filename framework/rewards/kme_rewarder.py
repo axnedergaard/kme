@@ -70,33 +70,34 @@ class KMERewarder(Rewarder):
 
 
     def infer(self, states: Tensor, learn: bool = True, sequential: bool = True) -> FloatTensor:
-        # 1) Update kmeans with all states and get updated centroids idx
-        states = self._port_to_tensor(states) # (B, dim_states)
-        updated_idx = self.kmeans(states, learn=learn) # (B,)
-        # 2) Update distances and compute reward (seq or batch)
         # Usage notice: if B > K, then batch update is more efficient
         # Sidenote: batch infer will only produce one reward for B states
-        if sequential: return self._infer_seq(updated_idx, learn) # (B,)
-        return self._infer_batch(learn) # (1,)
+        states = self._port_to_tensor(states) # (B, dim_states)
+        if sequential: return self._infer_seq(states, learn) # (B,)
+        return self._infer_batch(states, learn) # (1,)
 
 
-    def _infer_seq(self, updated_idx: Tensor, learn: bool = True) -> FloatTensor:
+    def _infer_seq(self, states: Tensor, learn: bool = True) -> FloatTensor:
         # Extract a reward for each state in the batch sequentially
         # Leverages sparse kmeans update to update distance in O(K)
         # Not deterministic (regardless of learn) as states are shuffled in kmeans
         tmp_d, tmp_idx = self.closest_distances, self.closest_idx
-        rewards = torch.zeros(updated_idx.size(0))
-        for i, idx in enumerate(updated_idx):
+        rewards = torch.zeros(states.size(0))
+
+        for i, state in enumerate(states):
+            idx = self.kmeans(state, learn=learn)
             self._update_distances(idx) # adjust state sequentially
             rewards[i] = self._compute_reward(learn)
+
         if not learn: self.closest_distances, self.closest_idx = tmp_d, tmp_idx
         return rewards.view(-1)
     
 
-    def _infer_batch(self, learn: bool = True) -> FloatTensor:
+    def _infer_batch(self, states: Tensor, learn: bool = True) -> FloatTensor:
         # Extract a single reward from the whole batch of states to kmeans
         # Computes pairwise distances between all centroids from scratch in O(K^2)
         # This is deterministic if learn=False; as we only depend on final state
+        _ = self.kmeans(states, learn=learn) # (B,)
         m = self._pairwise_distances() # (K,K)
         if learn: self.closest_distances = torch.min(m, dim=1).values
         if learn: self.closest_idx = torch.argmin(m, dim=1)
