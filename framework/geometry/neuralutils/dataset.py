@@ -16,13 +16,8 @@ class PositiveDataset(D.IterableDataset):
     
     def __iter__(self):
         while True:
-            if len(self.samples) < 2:
-                base_point = torch.FloatTensor(self.ambient_dim).uniform_(-1.0, 1.0)
-                perturbation = torch.FloatTensor(self.ambient_dim).uniform_(-0.01, 0.01)
-                yield torch.stack([base_point, base_point + perturbation])
-            else:
-                idx = random.randrange(len(self.samples) - 1)
-                yield torch.stack([self.samples[idx], self.samples[idx + 1]])
+            idx = random.randrange(len(self.samples) - 1)
+            yield torch.stack([self.samples[idx], self.samples[idx + 1]])
 
     
     def add(self, data: Tensor):

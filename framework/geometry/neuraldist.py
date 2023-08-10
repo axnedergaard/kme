@@ -80,6 +80,9 @@ class NeuralDistance(Geometry):
 
     def learn(self, states: Tensor = None) -> FloatTensor:
         self.positive_batcher.dataset.add(states)
+        if len(self.positive_batcher.dataset.samples) < 2: 
+            return -1.0
+        
         self.network.train()
         total_loss = 0.0
 
