@@ -29,7 +29,6 @@ class OnlineKMeansEstimator(OnlineEstimator):
         
         if origin is not None:
             origin = self._port_to_tensor(origin)
-            print(origin, origin.shape, dim_states)
             assert origin.shape == (dim_states,), "Starting point must be a single state (dim_states,)"
 
 
