@@ -4,8 +4,8 @@ from typing import Callable, Union
 import numpy as np
 import torch
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-dtype = torch.float32
+def_device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+def_dtype = torch.float32
 
 class OnlineKMeansEstimator(OnlineEstimator):
 
@@ -18,7 +18,9 @@ class OnlineKMeansEstimator(OnlineEstimator):
         distance_func: Callable = None,
         origin: Union[Tensor, np.ndarray] = None,
         init_method: str = 'uniform',
-        homeostatis: bool = True
+        homeostatis: bool = True,
+        device: torch.device = def_device,
+        dtype: torch.dtype = def_dtype
     ):
         super().__init__(dim_states, device, dtype)    
         
@@ -31,6 +33,8 @@ class OnlineKMeansEstimator(OnlineEstimator):
             origin = self._port_to_tensor(origin)
             assert origin.shape == (dim_states,), "Starting point must be a single state (dim_states,)"
 
+        self.device: torch.device = device
+        self.dtype: torch.dtype = dtype
 
         # k-means spec
         self.K: int = K
@@ -39,7 +43,7 @@ class OnlineKMeansEstimator(OnlineEstimator):
 
         # regarding underlying manifold
         self.distance: Callable = self._euclidean_distance if distance_func is None else distance_func
-        self.origin: Tensor = torch.zeros((1, self.dim_states), dtype=dtype, device=device) if origin is None else origin
+        self.origin: Tensor = torch.zeros((1, self.dim_states), dtype=self.dtype, device=self.device) if origin is None else origin
         
         # tunable hyperparameters
         self.hp_learning_rate: float = learning_rate
@@ -48,7 +52,7 @@ class OnlineKMeansEstimator(OnlineEstimator):
 
         # internal k-means state
         self.centroids: Tensor = self._init_centroids() # (K, dim_states) mu_i
-        self.cluster_sizes: Tensor = torch.zeros((self.K,), dtype=dtype, device=device) # (K,) n_i
+        self.cluster_sizes: Tensor = torch.zeros((self.K,), dtype=self.dtype, device=self.device) # (K,) n_i
 
 
     # --- public interface methods ---
@@ -61,7 +65,7 @@ class OnlineKMeansEstimator(OnlineEstimator):
         shuffled_states: Tensor = states[torch.randperm(states.shape[0])]
         # closest_cluster_idx: Tensor = [self._update_single(s) for s in shuffled_states]
         # return torch.stack(closest_cluster_idx) # to flatten list of tensors
-        closest_cluster_idx = torch.zeros(shuffled_states.shape[0], dtype=torch.long, device=device)
+        closest_cluster_idx = torch.zeros(shuffled_states.shape[0], dtype=torch.long, device=self.device)
         for idx, state in enumerate(shuffled_states): closest_cluster_idx[idx] = self._update_single(state)
         return closest_cluster_idx
     
@@ -109,9 +113,9 @@ class OnlineKMeansEstimator(OnlineEstimator):
         if self.init_method == 'zeros':
             return self.origin.repeat(self.K, 1)
         elif self.init_method == 'uniform':
-            return 2 * torch.rand((self.K, self.dim_states), dtype=dtype, device=device) - 1
+            return 2 * torch.rand((self.K, self.dim_states), dtype=self.dtype, device=self.device) - 1
         elif self.init_method == 'gaussian':
-            cov = torch.eye(self.dim_states, dtype=dtype, device=device)
+            cov = torch.eye(self.dim_states, dtype=self.dtype, device=self.device)
             return torch.distributions.MultivariateNormal(self.origin, cov).sample((self.K,)).clamp(-1, 1)
 
         

@@ -10,8 +10,9 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 import numpy as np
 import torch
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-dtype = torch.float32
+def_device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+def_dtype = torch.float32
+
 
 LEARNING_RATE = 0.0001
 BATCH_SIZE = 128
@@ -28,16 +29,21 @@ class NeuralDistance(Geometry):
         ambient_dim: int,
         hidden_dims: list[int],
         embedding_dim: int,
-        activation: torch.nn.Module = torch.nn.ReLU()
+        activation: torch.nn.Module = torch.nn.ReLU(),
+        device: torch.device = def_device,
+        dtype: torch.dtype = def_dtype
     ) -> None:
         super().__init__(ambient_dim)
+
+        self.device = device
+        self.dtype = dtype
 
         self.network = MLP(
             input_dim=ambient_dim,
             output_dim=embedding_dim,
             hidden_dims=hidden_dims,
             activation=activation
-        ).to(device)
+        ).to(self.device)
 
         # self.optimizer = torch.optim.Adam(self.network.parameters(), lr=LEARNING_RATE)
         # self.optimizer = torch.optim.SGD(self.network.parameters(), lr=LEARNING_RATE)
@@ -89,11 +95,11 @@ class NeuralDistance(Geometry):
         for positive_batch, negative_batch in islice(self.loader, BATCHES_PER_LEARN):
             self.optimizer.zero_grad()
 
-            positive_batch = positive_batch.to(device)
+            positive_batch = positive_batch.to(self.device)
             pos_difference = self.distance(positive_batch[:, 0, :], positive_batch[:, 1, :])
             positive_loss = torch.sum(pos_difference)
 
-            negative_batch = negative_batch.to(device)
+            negative_batch = negative_batch.to(self.device)
             neg_difference = self.distance(negative_batch[:, 0, :], negative_batch[:, 1, :])
             negative_loss = - NEGATIVE_SAMPLE_SCALING * torch.sum(torch.relu(neg_difference - NEGATIVE_MARGIN))
 
@@ -112,11 +118,12 @@ class NeuralDistance(Geometry):
         assert x.dim() == y.dim() == 2 # (B, ambient_dim)
         return torch.norm(x - y, p=2, dim=1) # (B,)
 
+
     def _port_to_tensor(self, input: Union[np.ndarray, Tensor]) -> Tensor:
         if isinstance(input, np.ndarray):
-            return torch.tensor(input, device=device, dtype=dtype)
+            return torch.tensor(input, device=self.device, dtype=self.dtype)
         elif isinstance(input, torch.Tensor):
-            return input.to(device=device, dtype=dtype)
+            return input.to(device=self.device, dtype=self.dtype)
         else:
             raise ValueError("Unsupported input type. Expected numpy.ndarray \
                     or torch.Tensor, got: {}".format(type(input)))

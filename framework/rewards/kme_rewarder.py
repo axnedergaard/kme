@@ -1,4 +1,4 @@
-from rewarder import Rewarder
+from rewards import Rewarder
 from density import OnlineKMeansEstimator
 from typing import Callable, Union, Optional
 from torch import Tensor, FloatTensor, LongTensor
@@ -7,8 +7,8 @@ import numpy as np
 import torch
 
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-dtype = torch.float32
+def_device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+def_dtype = torch.float32
 
 
 class EntropicFunctionType(Enum):
@@ -36,7 +36,10 @@ class KMERewarder(Rewarder):
         entropic_func: str = 'exponential',
         power_fn_exponent: float = 0.5,
         differential: bool = True,
-        eps: Optional[float] = 1e-9
+        eps: Optional[float] = 1e-9,
+        # TORCh
+        device: torch.device = def_device,
+        dtype: torch.dtype = def_dtype
     ) -> None:
         super().__init__()
 
@@ -44,11 +47,14 @@ class KMERewarder(Rewarder):
         assert 0 < eps < 1, "eps must be in the range (0, 1)"
         assert EntropicFunctionType(entropic_func), "Unsupported entropic function type"
 
+        self.device = device
+        self.dtype = dtype
+
         self.K = K
         self.differential: bool = differential
         self.fn_type: EntropicFunctionType = EntropicFunctionType(entropic_func)
-        self.power_fn_exponent: Tensor = torch.tensor(power_fn_exponent, device=device)
-        self.eps: Tensor = torch.tensor(eps, device=device)
+        self.power_fn_exponent: Tensor = torch.tensor(power_fn_exponent, device=self.device)
+        self.eps: Tensor = torch.tensor(eps, device=self.device)
 
         # underlying kmeans density estimator
         self.kmeans = OnlineKMeansEstimator(
@@ -115,7 +121,7 @@ class KMERewarder(Rewarder):
 
     def _pairwise_distances(self, diag: float = float('inf')) -> Tensor:
         # Time-complexity: O(K^2 * dim_states)
-        m = torch.zeros(self.K, self.K, device=device)
+        m = torch.zeros(self.K, self.K, device=self.device)
         x = self.kmeans.centroids.unsqueeze(0)
         y = self.kmeans.centroids.unsqueeze(1)
         m = torch.norm(x - y, dim=2, p=2)
@@ -153,9 +159,9 @@ class KMERewarder(Rewarder):
 
     def _port_to_tensor(self, input: Union[np.ndarray, Tensor]) -> Tensor:
         if isinstance(input, np.ndarray):
-            return torch.tensor(input, device=device, dtype=dtype)
+            return torch.tensor(input, device=self.device, dtype=self.dtype)
         elif isinstance(input, torch.Tensor):
-            return input.to(device=device, dtype=dtype)
+            return input.to(device=self.device, dtype=self.type)
         else:
             raise ValueError("Unsupported input type. Expected numpy.ndarray \
                     or torch.Tensor, got: {}".format(type(input)))
@@ -164,7 +170,7 @@ class KMERewarder(Rewarder):
 
 if __name__ == '__main__':
     r = KMERewarder(3, 3, 0.1, 3)
-    s = torch.tensor([[1,2,3], [4,5,6], [7,8,9], [10,11,12]], dtype=dtype)
+    s = torch.tensor([[1,2,3], [4,5,6], [7,8,9], [10,11,12]], dtype=def_dtype)
     
     print("sequential tests")
     print(r.infer(s, sequential=True, learn=False))

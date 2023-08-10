@@ -4,7 +4,6 @@ import numpy as np
 import random
 import torch
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class PositiveDataset(D.IterableDataset):
     
@@ -23,7 +22,7 @@ class PositiveDataset(D.IterableDataset):
     def add(self, data: Tensor):
         if data is None: return
         if isinstance(data, np.ndarray):
-            data = torch.tensor(data, device=device)
+            data = torch.tensor(data)
         if len(data.shape) == 1:
             self.samples.append(data)
         elif len(data.shape) == 2:
