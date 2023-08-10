@@ -85,7 +85,7 @@ class KMERewarder(Rewarder):
         rewards = torch.zeros(states.size(0))
 
         for i, state in enumerate(states):
-            idx = self.kmeans(state, learn=learn)
+            idx = self.kmeans(state.unsqueeze(0), learn=learn)
             self._update_distances(idx) # adjust state sequentially
             rewards[i] = self._compute_reward(learn)
 
@@ -162,7 +162,7 @@ class KMERewarder(Rewarder):
         if isinstance(input, np.ndarray):
             return torch.tensor(input, device=self.device, dtype=self.dtype)
         elif isinstance(input, torch.Tensor):
-            return input.to(device=self.device, dtype=self.type)
+            return input.to(device=self.device, dtype=self.dtype)
         else:
             raise ValueError("Unsupported input type. Expected numpy.ndarray \
                     or torch.Tensor, got: {}".format(type(input)))

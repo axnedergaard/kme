@@ -59,19 +59,21 @@ Please refer to the paper for parameter values.
 - [x] Write down skeleton of rl experiment script @xan
 - [x] Restructure repository according to rl exp @both
 - [x] Fix logic flaw on kmeans encoder for distances @ap
-- [x] dataset: if n(samples) < 2: dont train @ap
-- [] bring out the device, dtype, seed @ap
-- [] use camel case convention for filenames @ap
-- [] (future) kmeans estimator: add interpolate function @ap
-- [] change logic for the sequential rewards @ap
-- [] add function to parallelize @ap
-- [] add learned distance in update_distances <= @ap
-- [] pathological: first_mask FALSE AND closest_idx @ap
-- [] infer_batch, call twice the min @ap
-- [] pairwise_distance optimization @ap
-- [] port distances stuff into kmeans_estimator @ap
+- [x] Dataset: if n(samples) < 2: dont train @ap
+- [x] Bring out the device, dtype @ap
+- [x] Change logic for the sequential rewards @ap
+- [] Add function to parallelize @ap
+- [] Add learned distance in update_distances <= @ap
+- [] Pathological: first_mask FALSE AND closest_idx @ap
+- [] Infer_batch, call twice the min @ap
+- [] Pairwise_distance optimization @ap
+- [] Port to tensor logic to user with utils @ap
+- [] Port distances stuff into kmeans_estimator @ap
+- [] Use camel case convention for filenames @ap
+- [] Add seed logic for reproducibility @ap
 - [] Reorder manifolds classes @xan
 - [] Add online knn density estimator @ap
 - [] Fix vizualizer to handle any np.array shape @xan
 - [] Lay down clear plan for all experiments in paper @both
+- [] (Future) kmeans estimator: add interpolate function @ap
 
