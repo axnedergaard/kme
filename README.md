@@ -62,7 +62,7 @@ Please refer to the paper for parameter values.
 - [x] Dataset: if n(samples) < 2: dont train @ap
 - [x] Bring out the device, dtype @ap
 - [x] Change logic for the sequential rewards @ap
-- [] Add function to parallelize @ap
+- [x] Add function to parallelize @ap
 - [] Add learned distance in update_distances <= @ap
 - [] Pathological: first_mask FALSE AND closest_idx @ap
 - [] Infer_batch, call twice the min @ap

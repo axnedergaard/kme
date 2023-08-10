@@ -2,9 +2,11 @@ from rewards import Rewarder
 from density import OnlineKMeansEstimator
 from typing import Callable, Union, Optional
 from torch import Tensor, FloatTensor, LongTensor
+import concurrent.futures
 from enum import Enum
 import numpy as np
 import torch
+import os
 
 
 def_device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -50,6 +52,13 @@ class KMERewarder(Rewarder):
         self.device = device
         self.dtype = dtype
 
+        if device == torch.device('cuda'):
+            self.num_cuda_cores_per_device = 1024  # varies by GPU
+            self.num_threads = torch.cuda.device_count() * self.num_cuda_cores_per_device
+        else:
+            # Use the number of CPU cores if on CPU
+            self.num_threads = os.cpu_count()
+
         self.K = K
         self.differential: bool = differential
         self.fn_type: EntropicFunctionType = EntropicFunctionType(entropic_func)
@@ -75,6 +84,20 @@ class KMERewarder(Rewarder):
         states = self._port_to_tensor(states) # (B, dim_states)
         if sequential: return self._infer_seq(states, learn) # (B,)
         return self._infer_batch(states, learn) # (1,)
+    
+
+    def infer_par(self, states: Tensor, learn: bool = True) -> FloatTensor:
+        # `states` is a set of states (S, dim_states) that are independent
+        # These are not a sequence from agent interating with environment
+        # But rather a set of different paths the agent might take (parallel)
+        rewards = torch.zeros(states.size(0))
+        num_threads_adj = min(states.size(0), self.num_threads)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads_adj) as executor:
+            # Sequential set to true to leverage sparse kmeans update, avoid pairwise computations
+            lam = lambda s: self.infer(s.unsqueeze(0), learn=learn, sequential=True)
+            for idx, reward in enumerate(executor.map(lam, states)):
+                rewards[idx] = reward
+        return rewards
 
 
     def _infer_seq(self, states: Tensor, learn: bool = True) -> FloatTensor:
@@ -180,3 +203,6 @@ if __name__ == '__main__':
     print("batch tests")
     print(r.infer(s, sequential=False))
     print(r.infer(s, sequential=False))
+
+    print("parallel tests")
+    print(r.infer_par(s))
