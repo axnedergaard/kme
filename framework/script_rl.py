@@ -2,7 +2,6 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from util import visualizer
 from manifold import manifold
-from torchkme import KMeansEncoder
 from util import visualizer
 from manifold import manifold
 from density import OnlineKMeansEstimator
