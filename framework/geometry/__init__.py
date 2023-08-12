@@ -1,3 +1,4 @@
 from .geometry import Geometry
-from .neuraldist import NeuralDistance
-from .neuralutils import *
+from .neural_distance import NeuralDistance
+from .euclidean_distance import EuclideanDistance
+from .neural_utils import *

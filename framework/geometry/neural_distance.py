@@ -1,7 +1,7 @@
 from typing import Callable, Union
 from geometry import Geometry
-from .neuralutils.mlp import MLP
-from .neuralutils.dataset import *
+from .neural_utils import MLP
+from .neural_utils.dataset import *
 import torch.utils.data as D
 from itertools import islice
 from torch import Tensor, FloatTensor
@@ -15,6 +15,7 @@ def_dtype = torch.float32
 
 
 LEARNING_RATE = 0.0001
+WEIGHT_DECAY = 0.01
 BATCH_SIZE = 128
 
 BATCHES_PER_LEARN = 2
@@ -25,13 +26,24 @@ NEGATIVE_MARGIN = 1.0
 class NeuralDistance(Geometry):
     
     def __init__(
-        self, 
+        self,
+        # ARCHITECTURE MODEL
         ambient_dim: int,
         hidden_dims: list[int],
         embedding_dim: int,
         activation: torch.nn.Module = torch.nn.ReLU(),
-        device: torch.device = def_device,
-        dtype: torch.dtype = def_dtype
+        # HYPERPARAMETERS
+        learning_rate: float = LEARNING_RATE,
+        weight_decay: float = 0.01,
+        batch_size: int = BATCH_SIZE,
+        batches_per_learn: int = BATCHES_PER_LEARN,
+        negative_sample_scaling: float = NEGATIVE_SAMPLE_SCALING,
+        negative_margin: float = NEGATIVE_MARGIN,
+        # TORCH PARAMETERS
+        device: torch.device = torch.device('cpu'),
+        dtype: torch.dtype = torch.float32,
+        # AMBIENT DIM DISTANCE
+        d: Callable = None
     ) -> None:
         super().__init__(ambient_dim)
 
@@ -45,15 +57,25 @@ class NeuralDistance(Geometry):
             activation=activation
         ).to(self.device)
 
+        from geometry import EuclideanDistance
+        self.d = EuclideanDistance(embedding_dim) if d is None else d
+
+        self.learning_rate = learning_rate
+        self.weight_decay = weight_decay
+        self.batch_size = batch_size
+        self.batches_per_learn = batches_per_learn
+        self.negative_sample_scaling = negative_sample_scaling
+        self.negative_margin = negative_margin
+
         # self.optimizer = torch.optim.Adam(self.network.parameters(), lr=LEARNING_RATE)
         # self.optimizer = torch.optim.SGD(self.network.parameters(), lr=LEARNING_RATE)
         # self.scheduler = CosineAnnealingLR(self.optimizer, T_max=100)
 
-        self.optimizer = torch.optim.AdamW(self.network.parameters(), lr=LEARNING_RATE)
+        self.optimizer = torch.optim.AdamW(self.network.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
         self.scheduler = StepLR(self.optimizer, step_size=50, gamma=0.1)
 
-        self.positive_batcher = D.DataLoader(PositiveDataset(ambient_dim), batch_size=BATCH_SIZE)
-        self.negative_batcher = D.DataLoader(RandomDataset(ambient_dim), batch_size=BATCH_SIZE)
+        self.positive_batcher = D.DataLoader(PositiveDataset(ambient_dim), batch_size=self.batch_size)
+        self.negative_batcher = D.DataLoader(RandomDataset(ambient_dim), batch_size=self.batch_size)
         self.loader = zip(self.positive_batcher, self.negative_batcher)
 
     
@@ -73,15 +95,13 @@ class NeuralDistance(Geometry):
             concatenated = torch.cat((x, y), dim=0) # (2B, ambient_dim)
             embeddings = self.network(concatenated) # (2B, embedding_dim)
             embedded_x, embedded_y = torch.chunk(embeddings, 2, dim=0) # (B, embedding_dim)
-            d = self.euclidean if d is None else d
         
         else: # kmeans optim: (1, ambient_dim) vs (B, ambient_dim)
             concatenated = torch.cat((x, y), dim=0) # (B+1, ambient_dim)
             embeddings = self.network(concatenated) # (B+1, embedding_dim)
             embedded_x, embedded_y = embeddings[:1], embeddings[1:] # (1, embedding_dim), (B, embedding_dim)
-            d = self.euclidean if d is None else d
 
-        return d(embedded_x, embedded_y) # (B,)
+        return self.d(embedded_x, embedded_y) # (B,)
 
 
     def learn(self, states: Tensor = None) -> FloatTensor:
@@ -92,7 +112,7 @@ class NeuralDistance(Geometry):
         self.network.train()
         total_loss = 0.0
 
-        for positive_batch, negative_batch in islice(self.loader, BATCHES_PER_LEARN):
+        for positive_batch, negative_batch in islice(self.loader, self.batches_per_learn):
             self.optimizer.zero_grad()
 
             positive_batch = positive_batch.to(self.device)
@@ -101,7 +121,7 @@ class NeuralDistance(Geometry):
 
             negative_batch = negative_batch.to(self.device)
             neg_difference = self.distance(negative_batch[:, 0, :], negative_batch[:, 1, :])
-            negative_loss = - NEGATIVE_SAMPLE_SCALING * torch.sum(torch.relu(neg_difference - NEGATIVE_MARGIN))
+            negative_loss = - self.negative_sample_scaling * torch.sum(torch.relu(neg_difference - self.negative_margin))
 
             loss = positive_loss + negative_loss
             loss.backward()
