@@ -23,7 +23,7 @@ SAMPLING = ['rw', 'sample']
 
 # KME
 K = 300
-LR = 0.5 
+LR = 0.1
 BALANCING_STRENGHT = 0.1
 HOMEOSTASIS = True
 INIT_METHOD = 'uniform'
@@ -94,7 +94,7 @@ def renderloop() -> None:
         visualizer.add(centroids)
         visualizer.render()
         
-        kmeans.update(torch.tensor(points))
+        kmeans.update(torch.tensor(points, dtype=torch.float32))
 
         time_end = time.time()
         time_elapsed = time_end - time_start
@@ -107,5 +107,6 @@ if __name__ == '__main__':
     print(args)
     m = get_manifold(args)
     visualizer = visualizer.Visualizer(interface=args.interface, defaults={'scale': INTERFACE_SCALE})
-    kmeans = OnlineKMeansEstimator(K, m.ambient_dim, LR, BALANCING_STRENGHT, origin=m.starting_state(), init_method=INIT_METHOD)
+    kmeans = OnlineKMeansEstimator(K, m.ambient_dim, learning_rate=LR, \
+        balancing_strength=BALANCING_STRENGHT, init_method=INIT_METHOD)
     renderloop()
