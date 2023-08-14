@@ -11,34 +11,22 @@ class Rewarder:
     def __init__(self) -> None:
         pass
 
-    def __call__(self, states: Tensor, learn: bool = True) -> FloatTensor:
+    def __call__(self, states: Tensor) -> FloatTensor:
         """
         Allow the Rewarder object to be callable. This provides a quick way to infer rewards for given states.
-        Args:
-            states (torch.Tensor): States for which the rewards need to be inferred.
-            learn (bool, optional): If True, learn from the states during reward inference. Default is True.
+        Args: states (torch.Tensor): States for which the rewards need to be inferred.
         Returns: FloatTensor: Inferred rewards for the provided states.
         """
-        return self.infer(states, learn=learn)
+        return self.compute(states)
 
-    def infer(self, states: Tensor, learn: bool = True) -> FloatTensor:
+    def compute(self, states: Tensor) -> FloatTensor:
         """
         Infer rewards for the given states. This method serves as the main mechanism for reward inference 
         and can be extended or overridden by specific reward models.
-        Args:
-            states (torch.Tensor): States for which the rewards need to be inferred.
-            learn (bool, optional): If True, learn from the states during reward inference. Default is True.
+        Args: states (torch.Tensor): States for which the rewards need to be inferred.
         Returns: FloatTensor: Inferred rewards for the provided states.
         """
         raise NotImplementedError()
-    
-    def reward(self, states: Tensor) -> FloatTensor:
-        """
-        Compute explicit rewards for the provided states without any learning. 
-        Args: states (torch.Tensor): States for which the rewards are to be computed.
-        Returns: FloatTensor: Computed rewards for the provided states.
-        """
-        return self.infer(states, learn=False)
 
     def learn(self, states: Tensor) -> None:
         """
