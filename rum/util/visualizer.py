@@ -3,8 +3,8 @@ import glfw
 import numpy as np
 from scipy.spatial.transform import Rotation as scipy_rotation 
 
-from . import constant_interface
-from . import xtouch_interface
+from .constant_interface import ConstantInterface
+from .xtouch_interface import XTouchInterface
 
 
 # TODO. Interface sometimes crashes for unknown reason.
@@ -51,13 +51,13 @@ class Visualizer:
         ['y_angle', -180, 180],
         ['scale', 0.1, 2],
       ]
-      self.interface = xtouch_interface.XTouchInterface(parameters)
+      self.interface = XTouchInterface(parameters)
     else:
       changes = {
         'x_angle': 1,
         'y_angle': 1,
       }
-      self.interface = constant_interface.ConstantInterface(parameters, changes, defaults)
+      self.interface = ConstantInterface(parameters, changes, defaults)
 
   def add(self, data):
     name = data['name']

@@ -7,10 +7,10 @@ import torch
 
 class PositiveDataset(D.IterableDataset):
     
-    def __init__(self, ambient_dim: int):
+    def __init__(self, dim: int):
         super(PositiveDataset, self).__init__()
         self.samples = []
-        self.ambient_dim = ambient_dim
+        self.dim = dim
 
     
     def __iter__(self):
@@ -31,14 +31,14 @@ class PositiveDataset(D.IterableDataset):
 
 class RandomDataset(D.IterableDataset):
     
-    def __init__(self, ambient_dim: int):
+    def __init__(self, dim: int):
         super(RandomDataset, self).__init__()
-        self.ambient_dim = ambient_dim
+        self.dim = dim
 
 
     def __iter__(self):
         while True:
-            r1 = torch.FloatTensor(self.ambient_dim).uniform_(-1.0, 1.0)
-            r2 = torch.FloatTensor(self.ambient_dim).uniform_(-1.0, 1.0)
+            r1 = torch.FloatTensor(self.dim).uniform_(-1.0, 1.0)
+            r2 = torch.FloatTensor(self.dim).uniform_(-1.0, 1.0)
             yield torch.stack([r1, r2])
 

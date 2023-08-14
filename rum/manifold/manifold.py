@@ -1,6 +1,8 @@
 import numpy as np
 import scipy
 import gymnasium
+from ..density import Density
+from ..geometry import Geometry
 
 # TODO. Sampling multiple points in one call for Euclidean and Spherical.
 # TODO. Proper implementation of hypersphere and torus (support d!=2 and use multiple charts to avoid singularities.
@@ -55,10 +57,9 @@ class Chart():
     return self.distance_function(x, self.domain_center) < self.domain_radius
 
   def image_contains(self, x):
-    return EuclideanManifold.distance(x, self.image_center) < self.image_radius
+    return EuclideanManifold.distance_function(x, self.image_center) < self.image_radius
 
-#class Manifold(Environment, Density, Distance):
-class Manifold(gymnasium.Env):
+class Manifold(gymnasium.Env, Density, Geometry):
   def __init__(self, dim, ambient_dim):
     self.dim = dim
     self.ambient_dim = ambient_dim 
@@ -87,7 +88,7 @@ class Manifold(gymnasium.Env):
       prob_state = self.pdf(state)
       accepted = False
       while not accepted:
-        change_state = SphericalManifold._sample_uniform(self.dim - 1)
+        change_state = SphereManifold._sample_uniform(self.dim - 1)
         new_state = self._manifold_step(state, change_state, step_size if step_size is not None else self.max_step_size)
         prob_new_state = self.pdf(new_state)
         if np.random.uniform() < prob_new_state / prob_state:
@@ -121,7 +122,7 @@ class Manifold(gymnasium.Env):
   def sample(self):
     raise NotImplementedError
 
-  def distance(self, x, y):
+  def distance_function(self, x, y):
     raise NotImplementedError
 
   def metric_tensor(self):
@@ -144,7 +145,7 @@ class EuclideanManifold(Manifold):
         image_radius=np.inf,
         map_=lambda x: x,
         inverse_map=lambda x: x,
-        distance_function=self.distance
+        distance_function=self.distance_function
       )
     ]
 
@@ -172,7 +173,7 @@ class EuclideanManifold(Manifold):
       return np.random.normal(self.sampler['mean'], self.sampler['std'], self.dim)
 
   @staticmethod
-  def distance(x, y):
+  def distance_function(x, y):
     return np.linalg.norm(x - y)
 
   def metric_tensor(self, x):
@@ -184,11 +185,11 @@ class EuclideanManifold(Manifold):
     else:
       return 0.0
 
-class SphericalManifold(Manifold):
+class SphereManifold(Manifold):
   # We assume unit radius.
   def __init__(self, dim, sampler):
     assert dim == 2 # TODO.
-    super(SphericalManifold, self).__init__(dim, dim + 1)
+    super(SphereManifold, self).__init__(dim, dim + 1)
     self.sampler = sampler
 
     # TODO. Right now this only works for dim=2 and has a singular point.
@@ -199,7 +200,7 @@ class SphericalManifold(Manifold):
         image_radius=np.inf, # TODO
         map_=self._to_local,
         inverse_map=self._from_local,
-        distance_function=self.distance
+        distance_function=self.distance_function
       )
     ]
 
@@ -225,7 +226,7 @@ class SphericalManifold(Manifold):
       return scipy.stats.vonmises_fisher.rvs(self.sampler['mu'], self.sampler['kappa'], size=1)[0]
       
   @staticmethod
-  def distance(x, y):
+  def distance_function(x, y):
     return np.arccos(np.dot(x, y))
 
   def metric_tensor(self, x):
@@ -253,10 +254,10 @@ class SphericalManifold(Manifold):
   def implicit_function(self, c):
     return 1.0 - c[0]**2 - c[1]**2
 
-class ToroidalManifold(Manifold):
+class TorusManifold(Manifold):
   def __init__(self, dim):
     assert dim == 2 # TODO.
-    super(ToroidalManifold, self).__init__(dim, dim + 1)
+    super(TorusManifold, self).__init__(dim, dim + 1)
 
     self.r = 1/3 # Radius of "inner" sphere. 
     self.R = 2/3 # Radius of "outer" sphere.
@@ -268,7 +269,7 @@ class ToroidalManifold(Manifold):
         image_radius=np.inf, # TODO
         map_=self._to_local,
         inverse_map=self._from_local,
-        distance_function=self.distance
+        distance_function=self.distance_function
       )
     ]
 
@@ -288,7 +289,7 @@ class ToroidalManifold(Manifold):
     local = np.random.uniform(-np.pi, np.pi, 2)
     return self._from_local(local)
 
-  def distance(self, x, y):
+  def distance_function(self, x, y):
     # Based on idea that cut toroidal is a cylinder... TODO. Could be wrong.
     x_local = self._to_local(x)
     y_local = self._to_local(y)
@@ -325,10 +326,10 @@ class ToroidalManifold(Manifold):
     z = self.r * np.sin(c[1])
     return np.array([x, y, z])
 
-class HyperbolicParaboloidalManifold(Manifold):
+class HyperbolicParabolaManifold(Manifold):
   def __init__(self, dim):
     assert dim == 2 # TODO.
-    super(HyperbolicParaboloidalManifold, self).__init__(dim, dim + 1)
+    super(HyperbolicParabolaManifold, self).__init__(dim, dim + 1)
     self.low = -1.0 
     self.high = 1.0 
 
@@ -344,7 +345,7 @@ class HyperbolicParaboloidalManifold(Manifold):
   def starting_state(self):
     return np.zeros(self.ambient_dim)
 
-  def distance(self, x, y):
+  def distance_function(self, x, y):
     raise NotImplementedError
 
   def metric_tensor(self, x):
@@ -384,7 +385,7 @@ class HyperboloidManifold(Manifold):
   def starting_state(self):
     return np.zeros(self.ambient_dim)
 
-  def distance(self, x, y):
+  def distance_function(self, x, y):
     raise NotImplementedError
 
   def metric_tensor(self, x):

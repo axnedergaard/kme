@@ -1,5 +1,5 @@
-from density import Density
-from geometry import EuclideanDistance
+from .density import Density
+from ..geometry import EuclideanGeometry
 from torch import Tensor, LongTensor, FloatTensor
 from typing import Callable, Union, Optional, Tuple
 from inspect import signature, Parameter
@@ -45,7 +45,7 @@ class OnlineKMeansEstimator(Density):
 
     def __init__(
         self,
-        K: int,
+        k: int,
         dim_states: int,
         # learning hyperparameters
         homeostatis: bool = True,
@@ -64,8 +64,8 @@ class OnlineKMeansEstimator(Density):
     ):
         super().__init__(dim_states)  
 
-        if not isinstance(K, int) or K <= 0:
-            raise ValueError("Number of clusters K must be greater than 0")
+        if not isinstance(k, int) or k <= 0:
+            raise ValueError("Number of clusters k must be greater than 0")
         if not isinstance(learning_rate, float) or not 0 < learning_rate <= 1:
             raise ValueError("Learning rate must be in the range (0, 1]")
         if not isinstance(balancing_strength, float) or balancing_strength < 0:
@@ -75,7 +75,7 @@ class OnlineKMeansEstimator(Density):
         if origin is not None and (not isinstance(origin, Tensor) or origin.shape != (dim_states,)):
             raise ValueError("Origin centroid must be Tensor of shape (dim_states,)")
 
-        self.K: int = K
+        self.k: int = k
         self.dim_states: int = dim_states
         self.device: torch.device = device
         self.dtype: torch.dtype = dtype
@@ -102,10 +102,10 @@ class OnlineKMeansEstimator(Density):
 
         # Underlying manifold geometry functions
         self.distance_func: Callable = distance_func if distance_func is not None \
-            else EuclideanDistance(dim_states).distance   
+            else EuclideanGeometry(dim_states).distance_function
         
         self.interpolate_func: Callable = interpolate_func if interpolate_func is not None \
-            else EuclideanDistance(dim_states).interpolate
+            else EuclideanGeometry(dim_states).interpolate
 
         params = signature(self.distance_func).parameters
         if [x[0] for x in list(params.items())] != ['x', 'y']:
@@ -115,29 +115,29 @@ class OnlineKMeansEstimator(Density):
         if [x[0] for x in list(params.items())] != ['x', 'y', 'alpha']:
             raise ValueError("Interpolate function must take parameters (x, y, alpha)")
 
-        # Internal KMeans state
-        self.centroids: Tensor = self._init_centroids() # (K, dim_states)
-        self.cluster_sizes: Tensor = torch.zeros((self.K,), device=self.device) # (K,)
+        # Internal k-Means state
+        self.centroids: Tensor = self._init_centroids() # (k, dim_states)
+        self.cluster_sizes: Tensor = torch.zeros((self.k,), device=self.device) # (k,)
 
-        m = self._pairwise_distance() # (K,K)
+        m = self._pairwise_distance() # (k,k)
         # Diameters of each cluster and closest cluster idx
-        self.diameters = torch.min(m, dim=1).values # (K,)
-        self.closest_idx = torch.argmin(m, dim=1) # (K,)
+        self.diameters = torch.min(m, dim=1).values # (k,)
+        self.closest_idx = torch.argmin(m, dim=1) # (k,)
 
 
     # --- Public interface methods ---
 
-    def update(self, states: Tensor) -> None:
+    def learn(self, states: Tensor) -> None:
         """
         WARNING: Updates internal state of current object.
         Updates the k-means state given a batch of states
         Params: states: (B, dim_states) batch of states
-        Time-complexity: O(B * K * Pathological * dim_states)
+        Time-complexity: O(B * k * Pathological * dim_states)
         """
         if not isinstance(states, Tensor) or states.dim() != 2:
-            raise ValueError("States must be of shape (B, dim_states)")
+            raise ValueError("States must be tensor of shape (B, dim_states)")
         
-        B, K = states.shape[0], self.K # batch size, number clusters
+        B, k = states.shape[0], self.k # batch size, number clusters
         states = states.requires_grad_(False) # detach any gradients
 
         # distances, _ = self._find_closest_cluster(states) # (B,)
@@ -147,7 +147,7 @@ class OnlineKMeansEstimator(Density):
         shuffled_states = states[shuffle] # (B, dim_states)
         n_pathological = 0
 
-        if B <= K or self.force_sparse:
+        if B <= k or self.force_sparse:
             # Centroids sequential. Diameters sparse.
             for s in shuffled_states:
                 # Cannot be parallelized.
@@ -180,7 +180,7 @@ class OnlineKMeansEstimator(Density):
         return diameters
     
 
-    # --- KMeans density estimators methods ---
+    # --- k-Means density estimators methods ---
 
     def kmeans_objective(self, distances: Tensor) -> Tensor:
         """
@@ -202,32 +202,32 @@ class OnlineKMeansEstimator(Density):
     def entropy_lb(self, diameters: Optional[Tensor] = None) -> Tensor:
         """
         Computes the lower bound of the entropy of the k-means state
-        Params: diameters: (K,) diameters of each clusters
+        Params: diameters: (k,) diameters of each clusters
         Returns: (1,) lower bound of the entropy
-        Time-complexity: O(K)
+        Time-complexity: O(k)
         """
         if not isinstance(diameters, Tensor) and diameters.dim() != 1:
-            raise ValueError("Diameters must be Tensor of shape (K,)")
+            raise ValueError("Diameters must be Tensor of shape (k,)")
         # ds = self.diameters if diameters is None else diameters
-        entropies = self.entropic_func(diameters) # (K,)
+        entropies = self.entropic_func(diameters) # (k,)
         return torch.sum(entropies) # (1,)
     
 
-    # --- KMeans state update private methods ---
+    # --- kMeans state update private methods ---
 
     def _init_centroids(self) -> Tensor:
         """
         Initializes the centroids of the k-means state
-        Returns: (K, dim_states) centroids
-        Time-complexity: O(K * dim_states)
+        Returns: (k, dim_states) centroids
+        Time-complexity: O(k * dim_states)
         """
         if self.init_method == 'zeros':
-            return self.origin.repeat(self.K, 1)
+            return self.origin.repeat(self.k, 1)
         elif self.init_method == 'uniform':
-            return 2 * torch.rand((self.K, self.dim_states), dtype=self.dtype, device=self.device) - 1
+            return 2 * torch.rand((self.k, self.dim_states), dtype=self.dtype, device=self.device) - 1
         elif self.init_method == 'gaussian':
             cov = torch.eye(self.dim_states, dtype=self.dtype, device=self.device)
-            return torch.distributions.MultivariateNormal(self.origin, cov).sample((self.K,)).clamp(-1, 1)
+            return torch.distributions.MultivariateNormal(self.origin, cov).sample((self.k,)).clamp(-1, 1)
 
 
     def _update_single(self, state: Tensor) -> None:
@@ -235,7 +235,7 @@ class OnlineKMeansEstimator(Density):
         WARNING: Updates internal state of current object.
         Updates the k-means state given a single state
         Params: state: (dim_states,) state to update on
-        Time-complexity: O(Distance) + O(Interpolate) + O(K)
+        Time-complexity: O(Distance) + O(Interpolate) + O(k)
         """
         if not isinstance(state, Tensor) or state.dim() != 1:
             raise ValueError("State must be of shape (dim_states,)")
@@ -250,12 +250,12 @@ class OnlineKMeansEstimator(Density):
         Find closest cluster assignment and distance for each states in batch
         Params: states: (B, dim_states)
         Returns: distances: (B,) closest_idx: (B,)
-        Time-complexity: O(Distance) + O(B * K)
+        Time-complexity: O(Distance) + O(B * k)
         """
         if not isinstance(states, Tensor) or states.dim() != 2:
             raise ValueError("States must be of shape (B, dim_states) or (dim_states,)")
-        matrix_distances = self._weighted_distance(states) # (B, K)
-        if matrix_distances.dim() == 1: matrix_distances = matrix_distances.unsqueeze(0) # (1, K)
+        matrix_distances = self._weighted_distance(states) # (B, k)
+        if matrix_distances.dim() == 1: matrix_distances = matrix_distances.unsqueeze(0) # (1, k)
         distances, closest_idx = torch.min(matrix_distances, dim=1) # (B,)
         return distances, closest_idx # (B,)
 
@@ -265,13 +265,13 @@ class OnlineKMeansEstimator(Density):
         Computes the weighted distance of a state to the centroids
         Params: state: (1, dim_states) state to compute distance to
         Returns: (1,) weighted distance
-        Time-complexity: O(Distance) + O(K)
+        Time-complexity: O(Distance) + O(k)
         """
         if not isinstance(state, Tensor) or state.dim() != 2:
             raise ValueError("State must be of shape (1, dim_states)")
         
-        s, cs = state, self.centroids  # s(1, dim_states) cs(K, dim_states) 
-        distances: Tensor = self.distance_func(s, cs).view(-1) # distances(K,)
+        s, cs = state, self.centroids  # s(1, dim_states) cs(k, dim_states) 
+        distances: Tensor = self.distance_func(s, cs).view(-1) # distances(k,)
 
         if self.homeostatis:
             mean = torch.mean(self.cluster_sizes)
@@ -296,7 +296,7 @@ class OnlineKMeansEstimator(Density):
         return self.interpolate_func(c, state, self.lr) # (dim_states,)
 
 
-    # --- KMeans diameters private methods ---
+    # --- kMeans diameters private methods ---
 
     def _diameters_sparse(
             self, updated_idx: LongTensor, inplace: bool, centroids: Tensor = None
@@ -306,9 +306,9 @@ class OnlineKMeansEstimator(Density):
         Updates the diameters of k-means in sparse fashion
         Params: updated_idx: (1,) index of updated centroid
                 inplace: (bool) whether to update internal state
-                centroids: (K, dim_states) centroids to use for update
-        Returns: diameters: (K,) closest_idx: (K,) n_pathological: (int)
-        Time-complexity: (K * Pathological * dim_states)
+                centroids: (k, dim_states) centroids to use for update
+        Returns: diameters: (k,) closest_idx: (k,) n_pathological: (int)
+        Time-complexity: (k * Pathological * dim_states)
         """
 
         # 0) Setup variables to be updated
@@ -318,7 +318,7 @@ class OnlineKMeansEstimator(Density):
 
         # 1) Compute distances from the updated centroid to all others
         centroid = centroids[updated_idx]  # (1, dim_states)
-        new_diameters = self.distance_func(centroid, centroids)  # (K,)
+        new_diameters = self.distance_func(centroid, centroids)  # (k,)
         new_diameters[updated_idx] = float('inf')  # exclude updated centroid itself
 
         # 2) Update closest distances and idx of updated centroid
@@ -348,9 +348,9 @@ class OnlineKMeansEstimator(Density):
 
             for i, idx in enumerate(pathological_idx):
                 # Avoiding parallelization here due to the overhead from spawning threads
-                # n_pathological is about 1-2% of K, making parallelism less beneficial
+                # n_pathological is about 1-2% of k, making parallelism less beneficial
                 c = self.centroids[idx]  # (1, dim_states)
-                d = self.distance_func(c, centroids)  # (K,)
+                d = self.distance_func(c, centroids)  # (k,)
                 d[idx] = float('inf')  # exclude centroid itself
                 min_val, min_idx = torch.min(d, dim=0)
                 patho_diameters[i] = min_val
@@ -367,22 +367,22 @@ class OnlineKMeansEstimator(Density):
         WARNING: Updates internal state of current object.
         Updates the diameters of k-means in pairwise fashion
         Params: diag: (float) value to fill diagonal with
-        Time-complexity: O(K^2 * dim_states)
+        Time-complexity: O(k^2 * dim_states)
         """
-        m = self._pairwise_distance(diag) # (K, K)
+        m = self._pairwise_distance(diag) # (k, k)
         min_val, min_idx = torch.min(m, dim=1)
-        self.diameters = min_val # (K,)
-        self.closest_idx = min_idx # (K,)
+        self.diameters = min_val # (k,)
+        self.closest_idx = min_idx # (k,)
 
 
     def _pairwise_distance(self, diag: float = float('inf')) -> Tensor:
         """
         Computes the pairwise distance between centroids
         Params: diag: (float) value to fill diagonal with
-        Returns: (K, K) pairwise distance matrix
-        Time-complexity: O(K^2 * dim_states)
+        Returns: (k, k) pairwise distance matrix
+        Time-complexity: O(k^2 * dim_states)
         """
-        m = torch.zeros(self.K, self.K, device=self.device)
+        m = torch.zeros(self.k, self.k, device=self.device)
         x = self.centroids.unsqueeze(0)
         y = self.centroids.unsqueeze(1)
         m = torch.norm(x - y, dim=2, p=2)

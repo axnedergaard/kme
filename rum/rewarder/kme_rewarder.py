@@ -1,5 +1,5 @@
-from rewards import Rewarder
-from density import OnlineKMeansEstimator
+from .rewarder import Rewarder
+from ..density import OnlineKMeansEstimator
 from typing import Callable, Union, Optional, Tuple
 from torch import Tensor, FloatTensor, LongTensor
 from stable_baselines3.common.buffers import RolloutBuffer
@@ -15,7 +15,7 @@ class KMERewarder(Rewarder):
     def __init__(
         self,
         # KM DENSITY ESTIMATOR
-        K: int,
+        k: int,
         dim_states: int,
         learning_rate: float,
         balancing_strength: float,
@@ -44,26 +44,26 @@ class KMERewarder(Rewarder):
             # Use the number of CPU cores if on CPU
             self.num_threads = os.cpu_count()
 
-        self.K = K
+        self.k = k
         self.differential: bool = differential
         self.entropy_buff = 0.0 # store previous entropy
 
         # underlying kmeans density estimator
         self.kmeans = OnlineKMeansEstimator(
-            K, dim_states, learning_rate, balancing_strength,
+            k, dim_states, learning_rate, balancing_strength,
             distance_func, origin, init_method, homeostatis
         )
 
 
-    def compute(self, buffer: RolloutBuffer) -> FloatTensor:
+    def reward(self, buffer: RolloutBuffer) -> FloatTensor:
         if not isinstance(buffer, RolloutBuffer):
             raise TypeError("Buffer must be an instance of RolloutBuffer")
         n_steps, n_envs = buffer.buffer_size, buffer.num_envs
         states = buffer.observations.view(n_steps * n_envs, self.dim_states)
-        return self._compute(states).view(n_steps, n_envs)
+        return self._reward(states).view(n_steps, n_envs)
 
 
-    def _compute(self, states: Tensor) -> FloatTensor:
+    def _reward(self, states: Tensor) -> FloatTensor:
         if not isinstance(states, Tensor) or states.dim() != 2:
             raise ValueError("States must be of shape (B, dim_states)")
 

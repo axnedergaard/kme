@@ -1,17 +1,17 @@
-from geometry import Geometry
+from .geometry import Geometry
 from torch import Tensor, FloatTensor
 import torch
 
-class EuclideanDistance(Geometry):
+class EuclideanGeometry(Geometry):
 
-    def __init__(self, ambient_dim: int) -> None:
-        super().__init__(ambient_dim)
+    def __init__(self, dim: int) -> None:
+        super().__init__(dim)
 
 
-    def distance(self, x: Tensor, y: Tensor) -> FloatTensor:
+    def distance_function(self, x: Tensor, y: Tensor) -> FloatTensor:
         if len(x.shape) != 2 or len(y.shape) != 2:
             raise ValueError("Tensors must be 2D")
-        if x.shape[1] != self.ambient_dim or y.shape[1] != self.ambient_dim:
+        if x.shape[1] != self.dim or y.shape[1] != self.dim:
             raise ValueError("Tensors must lie in ambient space")
 
         if x.shape == y.shape or x.shape[0] == 1:
@@ -29,11 +29,10 @@ class EuclideanDistance(Geometry):
 
 
     def interpolate(self, x: Tensor, y: Tensor, alpha: float) -> Tensor:
-        if x.shape != (self.ambient_dim,) or y.shape != (self.ambient_dim,):
+        if x.shape != (self.dim,) or y.shape != (self.dim,):
             raise ValueError("Tensors must lie in ambient space")
         return (1 - alpha) * x + alpha * y
 
 
     def learn(self, states: Tensor = None) -> FloatTensor:
         pass # No learning is required.
-

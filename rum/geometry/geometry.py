@@ -3,19 +3,18 @@ import torch
 
 class Geometry():
     """
-    A base class representing a geometric structure in an ambient Euclidean space.
+    A base class representing a geometric structure on a space.
     This class provides a generic interface for computing geometric properties such as distance and interpolation
     and can be extended by specific geometric models.
     """
    
-    def __init__(self, ambient_dim: int) -> None:
-        # dimension of the ambient Euclidean space
-        self.ambient_dim = ambient_dim
+    def __init__(self, dim: int) -> None:
+        self.dim = dim
 
     def __call__(self, x: Tensor, y: Tensor) -> FloatTensor:
-        return self.distance(x, y)
+        return self.distance_function(x, y)
 
-    def distance(self, x: Tensor, y: Tensor) -> FloatTensor:
+    def distance_function(self, x: Tensor, y: Tensor) -> FloatTensor:
         """
         Compute the distance between states x and y in the geometric space.
         Args:

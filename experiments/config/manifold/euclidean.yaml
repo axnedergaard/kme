@@ -1,0 +1,5 @@
+dim: 3 
+sampler:
+  type: 'uniform'
+  low: -1.0
+  high: 1.0

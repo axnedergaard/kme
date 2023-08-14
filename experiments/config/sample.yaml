@@ -1,0 +1,19 @@
+
+defaults:
+  - manifold: euclidean
+
+max_samples: 1000
+samples_per_iter: 100
+
+sampling_method: 'sample'
+
+density:
+  k: 100
+  dim_states: ${manifold.dim}
+  #dim_states: ${eval:'${manifold.dim} + 1'}
+
+geometry:
+  #dim: ${eval:'${manifold.dim} + 1'}
+  dim: ${manifold.dim}
+  hidden_dims: [8]
+  embedding_dim: 16 

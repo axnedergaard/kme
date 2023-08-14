@@ -17,9 +17,9 @@ class Rewarder:
         Args: states (torch.Tensor): States for which the rewards need to be inferred.
         Returns: FloatTensor: Inferred rewards for the provided states.
         """
-        return self.compute(states)
+        return self.reward_function(states)
 
-    def compute(self, states: Tensor) -> FloatTensor:
+    def reward_function(self, states: Tensor) -> FloatTensor:
         """
         Infer rewards for the given states. This method serves as the main mechanism for reward inference 
         and can be extended or overridden by specific reward models.
