@@ -42,7 +42,7 @@ class Logger:
             density = self.density_estimator, 
             samples = samples, 
             **spec['params'])
-        self.log({name: data})
+        self.log({name: data}, use_wandb=not spec['local'])
 
   def log(self, data, use_wandb=True):
     if use_wandb:
