@@ -3,6 +3,7 @@ import scipy
 import gymnasium
 from ..density import Density
 from ..geometry import Geometry
+from ..geometry import EuclideanGeometry
 
 # TODO. Sampling multiple points in one call for Euclidean and Spherical.
 # TODO. Proper implementation of hypersphere and torus (support d!=2 and use multiple charts to avoid singularities.
@@ -131,6 +132,10 @@ class Manifold(gymnasium.Env, Density, Geometry):
   def implicit_function(self, c):
     raise NotImplementedError
 
+  def learn(self, _):
+    pass
+
+#class EuclideanManifold(Manifold):
 class EuclideanManifold(Manifold):
   def __init__(self, dim, sampler):
     super(EuclideanManifold, self).__init__(dim, dim)

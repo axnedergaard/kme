@@ -1,4 +1,5 @@
-dim: 3 
+name: 'EuclideanManifold'
+dim: ${ambient_dim} 
 sampler:
   type: 'uniform'
   low: -1.0

@@ -1,0 +1,2 @@
+name: 'EuclideanGeometry'
+dim: ${ambient_dim}

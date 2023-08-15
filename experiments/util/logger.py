@@ -7,7 +7,7 @@ LOCAL_LOG_SCRIPTS = [
 ]
 
 class Logger:
-  def __init__(self, cfg, manifold, geometry_estimator, density_estimator):
+  def __init__(self, cfg, manifold, geometry, density):
     # Convert script specification to proper format.
     self.script = cfg.script if 'script' in cfg else {}
     for name, spec in self.script.items():
@@ -29,8 +29,8 @@ class Logger:
       self.script[name] = spec
 
     self.manifold = manifold
-    self.geometry_estimator = geometry_estimator
-    self.density_estimator = density_estimator
+    self.geometry = geometry
+    self.density = density
 
   def run_scripts(self, n_iter, samples):
     for name, spec in self.script.items():
@@ -38,8 +38,8 @@ class Logger:
         script = getattr(analysis, name)
         data = script(
             manifold = self.manifold,
-            geometry = self.geometry_estimator, 
-            density = self.density_estimator, 
+            geometry = self.geometry, 
+            density = self.density, 
             samples = samples, 
             **spec['params'])
         self.log({name: data}, use_wandb=not spec['local'])

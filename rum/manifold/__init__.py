@@ -1,1 +1,1 @@
-from .manifold import EuclideanManifold, SphereManifold, TorusManifold, HyperbolicParabolaManifold, HyperboloidManifold
+from .manifold import EuclideanManifold, SphereManifold, TorusManifold, HyperbolicParabolaManifold, HyperboloidManifold, Manifold
