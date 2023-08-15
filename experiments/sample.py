@@ -1,15 +1,20 @@
+import os
+import json
+import random
 import torch 
 import hydra
 import wandb
 from omegaconf import OmegaConf
-OmegaConf.register_new_resolver("eval", eval)
 from util.logger import Logger
 from util.make import make
+from util.resolver import init_resolver
 
-@hydra.main(config_path="config", config_name="sample", version_base='1.3')
+init_resolver()
+
+@hydra.main(config_path='config', config_name='sample', version_base='1.3')
 def main(cfg):
   wandb_cfg = OmegaConf.to_container(cfg, resolve=True)
-  wandb.init(project='test', config=wandb_cfg)
+  wandb.init(project='test', config=wandb_cfg, dir=os.getcwd(), id=cfg.name, name=cfg.name)
 
   manifold = make(cfg, 'manifold')
   geometry = make(cfg, 'geometry')
@@ -18,8 +23,7 @@ def main(cfg):
   density = make(cfg, 'density')
   if density is None: 
     density = manifold
-  logger = Logger(cfg, manifold, geometry, density)
-  import pdb; pdb.set_trace()
+  logger = Logger(cfg, manifold, geometry, density, verbose=cfg.verbose)
 
   n_iter = 0
   while n_iter * cfg.samples_per_iter < cfg.max_samples:
@@ -34,6 +38,8 @@ def main(cfg):
     density.learn(samples_tensor)
 
     logger.run_scripts(n_iter, samples_tensor)
+
+  print('Ran experiment {}. It can be found at\n{}'.format(cfg.name, os.getcwd()))
 
 if __name__ == '__main__':
   main()

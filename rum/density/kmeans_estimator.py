@@ -193,10 +193,14 @@ class OnlineKMeansEstimator(Density):
             raise ValueError("States must be Tensor of shape (B,)")
         km_objective = torch.sum(distances.pow(2)) # (1,)
         return km_objective # (1,)
-    
+
 
     def pdf_approx(self, x: Tensor, diameters: Optional[Tensor] = None) -> Tensor:
         raise NotImplementedError()
+
+
+    def entropy(self):
+        return self.entropy_lb(self.diameters)
 
 
     def entropy_lb(self, diameters: Optional[Tensor] = None) -> Tensor:

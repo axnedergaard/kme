@@ -1,3 +1,13 @@
+name: ${random_name:}
+verbose: 0
+
+hydra:
+  run:
+    dir: output/${name}
+  job:
+    chdir: true 
+  output_subdir: 'hydra'
+
 defaults:
   - _self_
   - manifold: sphere 

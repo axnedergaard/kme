@@ -10,6 +10,9 @@ def pdf_loss(manifold, density, n_points=1000, **kwargs):
   pdf_est = density.pdf(samples)
   return scale_independent_loss(pdf_true, pdf_est)
 
+def state(samples, **kwargs):
+  return samples
+
 def test(success=True, **kwargs):
   if success:
     print('Test succeeded.')
