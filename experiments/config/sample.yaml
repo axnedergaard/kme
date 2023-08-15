@@ -1,5 +1,5 @@
-
 defaults:
+  - _self_
   - manifold: euclidean
 
 max_samples: 1000
