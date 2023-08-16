@@ -85,7 +85,7 @@ class NeuralGeometry(Geometry):
             return self.distance(x, y)
 
 
-    def distance(self, x: Tensor, y: Tensor, d: Callable = None) -> FloatTensor:
+    def distance(self, x: Tensor, y: Tensor) -> FloatTensor:
         x, y = self._port_to_tensor(x), self._port_to_tensor(y)
         
         assert x.dim() in [1, 2] and y.dim() in [1, 2] # (dim,) or (B, dim)
