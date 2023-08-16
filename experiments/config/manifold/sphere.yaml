@@ -1,4 +1,4 @@
 name: 'SphereManifold'
 dim: ${eval:'${ambient_dim} - 1'} 
-sampler:
-  type: 'uniform'
+defaults:
+  - sampler: uniform

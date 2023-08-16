@@ -3,7 +3,7 @@ verbose: 0
 
 hydra:
   run:
-    dir: output/${name}
+    dir: outputs/${name}
   job:
     chdir: true 
   output_subdir: 'hydra'
