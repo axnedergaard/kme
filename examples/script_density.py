@@ -1,6 +1,7 @@
-from util import visualizer
-from manifold import manifold
-from density import OnlineKMeansEstimator
+from rum.util import visualizer
+from rum.manifold import manifold
+from rum.density import OnlineKMeansEstimator
+import numpy as np
 import argparse
 import torch
 import time
@@ -62,11 +63,11 @@ def get_manifold(args: argparse.Namespace) -> manifold.Manifold:
         m = manifold.EuclideanManifold(args.dim, sampler)
     elif args.manifold == 'spherical':
         sampler = get_sampler(args)
-        m = manifold.SphericalManifold(args.dim, sampler)
+        m = manifold.SphereManifold(args.dim, sampler)
     elif args.manifold == 'toroidal':
-        m = manifold.ToroidalManifold(args.dim)
+        m = manifold.TorusManifold(args.dim)
     elif args.manifold == 'hyperpara':
-        m = manifold.HyperbolicParaboloidalManifold(args.dim)
+        m = manifold.HyperbolicParabolaManifold(args.dim)
     elif args.manifold == 'hyperboloid':
         m = manifold.HyperboloidManifold(args.dim)
 
@@ -94,7 +95,7 @@ def renderloop() -> None:
         visualizer.add(centroids)
         visualizer.render()
         
-        kmeans.update(torch.tensor(points, dtype=torch.float32))
+        kmeans.learn(torch.tensor(points, dtype=torch.float32))
 
         time_end = time.time()
         time_elapsed = time_end - time_start
