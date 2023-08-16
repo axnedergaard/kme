@@ -1,0 +1,4 @@
+name: 'NeuralGeometry'
+dim: ${ambient_dim}
+hidden_dims: [8]
+embedding_dim: 4

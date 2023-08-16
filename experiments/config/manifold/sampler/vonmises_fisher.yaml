@@ -1,0 +1,3 @@
+type: 'vonmises_fisher'
+mu: [0, 1, 0]
+kappa: 10
