@@ -1,6 +1,4 @@
 import os
-import json
-import random
 import torch 
 import hydra
 import wandb
@@ -37,7 +35,7 @@ def main(cfg):
     geometry.learn(samples_tensor)
     density.learn(samples_tensor)
 
-    logger.run_scripts(n_iter, samples_tensor)
+    logger.run_scripts(samples_tensor)
 
   print('Ran experiment {}. It can be found at\n{}'.format(cfg.name, os.getcwd()))
 

@@ -10,7 +10,7 @@ LOCAL_LOG_SCRIPTS = [
 ]
 
 class Logger:
-  def __init__(self, cfg, manifold, geometry, density, verbose=0):
+  def __init__(self, cfg, manifold, geometry, density, rewarder=None, agent=None, verbose=0):
     # Convert script specification to proper format.
     self.script = cfg.script if 'script' in cfg else {}
     for name, spec in self.script.items():
@@ -18,7 +18,7 @@ class Logger:
         spec = {
           'freq': spec,
           'local': name in LOCAL_LOG_SCRIPTS,
-          'params': {},
+          'kwargs': {},
           'runs': 0,
         }
       elif type(spec) is omegaconf.dictconfig.DictConfig:
@@ -27,7 +27,7 @@ class Logger:
           raise Exception('Script frequency not specified.')
         if 'local' not in spec:
           spec['local'] = name in LOCAL_LOG_SCRIPTS
-        spec['params'] = spec['params'] if 'params' in spec else {}
+        spec['kwargs'] = {key: value for key, value in spec.items() if key not in ['freq', 'local', 'runs']}
         spec['runs'] = 0
       else:
         raise Exception('Script specification must be int or omegaconf.dictconfig.DictConfig.')
@@ -38,19 +38,25 @@ class Logger:
     self.manifold = manifold
     self.geometry = geometry
     self.density = density
+    self.rewarder = rewarder
+    self.agent = agent
     self.verbose = verbose
+    self.runs = 0
 
-  def run_scripts(self, n_iter, samples):
+  def run_scripts(self, samples):
+    self.runs += 1
     for name, spec in self.script.items():
-      if n_iter % spec['freq'] == 0: # Run script.
+      if self.runs % spec['freq'] == 0: # Run script.
         self.script[name]['runs'] += 1
         script = getattr(analysis, name)
         data = script(
             manifold = self.manifold,
             geometry = self.geometry, 
             density = self.density, 
+            rewarder = self.rewarder,
+            agent = self.agent,
             samples = samples, 
-            **spec['params'])
+            **spec['kwargs'])
         # TODO. We currently do not do any data conversion, which could be inefficient.
         self.log({name: data}, use_wandb=not spec['local'], runs=spec['runs'])
 
