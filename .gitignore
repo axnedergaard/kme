@@ -22,6 +22,8 @@ testenv
 
 # Experiments outputs
 outputs/
+output/
+wandb/
 
 # ===============================
 # == PYTHON .GITIGNORE SECTION ==
