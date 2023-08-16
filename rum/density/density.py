@@ -45,10 +45,3 @@ class Density():
         Returns: float: Entropy value.
         """
         raise NotImplementedError()
-
-    def learn(self, states: torch.Tensor) -> None:
-        """
-        One iteration of learning underlying density function from given states.
-        Args: x (torch.Tensor): States from which to learn the density, of shape `(B, dim)`.
-        """
-        raise NotImplementedError()

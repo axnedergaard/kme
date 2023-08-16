@@ -26,7 +26,7 @@ class Geometry():
         """
         raise NotImplementedError()
 
-    def interpolate(self, x: Tensor, y: Tensor, alpha: float) -> Tensor:
+    def interpolate_function(self, x: Tensor, y: Tensor, alpha: float) -> Tensor:
         """
         Interpolate between states x and y, using a specified weight.
         Args:
@@ -37,10 +37,3 @@ class Geometry():
         """
         raise NotImplementedError()
     
-    def learn(self, states: Tensor = None) -> FloatTensor:
-        """
-        One iteration of learning underlying geometric representation from given states.
-        Args: states (torch.Tensor): States from which to learn the geometric representation.
-        Returns: FloatTensor: Loss incurred during learning on that iteration.
-        """
-        raise NotImplementedError()

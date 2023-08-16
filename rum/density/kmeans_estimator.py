@@ -1,4 +1,5 @@
 from .density import Density
+from ..learner import Learner
 from ..geometry import EuclideanGeometry
 from torch import Tensor, LongTensor, FloatTensor
 from typing import Callable, Union, Optional, Tuple
@@ -35,7 +36,7 @@ class EntropicFunction:
         return self.func(x, **self.kwargs)
 
 
-class OnlineKMeansEstimator(Density):
+class OnlineKMeansEstimator(Density, Learner):
 
     DEFAULT_LR = 0.1
     DEFAULT_BS = 0.1
@@ -60,9 +61,12 @@ class OnlineKMeansEstimator(Density):
         interpolate_func: Callable = None,
         # torch device and dtype
         device: torch.device = torch.device('cpu'),
-        dtype: torch.dtype = torch.float32
+        dtype: torch.dtype = torch.float32,
+        # learner buffer
+        buffer_size: int = 1000,
     ):
-        super().__init__(dim_states)  
+        Density.__init__(self, dim_states)
+        Learner.__init__(self, dim_states, buffer_size)
 
         if not isinstance(k, int) or k <= 0:
             raise ValueError("Number of clusters k must be greater than 0")

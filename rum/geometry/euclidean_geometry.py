@@ -28,7 +28,7 @@ class EuclideanGeometry(Geometry):
         return d # pairwise (B,) or matrix (B1, B2)
 
 
-    def interpolate(self, x: Tensor, y: Tensor, alpha: float) -> Tensor:
+    def interpolate_function(self, x: Tensor, y: Tensor, alpha: float) -> Tensor:
         if x.shape != (self.dim,) or y.shape != (self.dim,):
             raise ValueError("Tensors must lie in ambient space")
         return (1 - alpha) * x + alpha * y

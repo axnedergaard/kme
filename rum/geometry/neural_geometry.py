@@ -1,3 +1,4 @@
+from ..learner import Learner
 from .geometry import Geometry
 from .euclidean_geometry import EuclideanGeometry
 from .neural_utils import MLP
@@ -24,7 +25,7 @@ NEGATIVE_SAMPLE_SCALING = 1.0
 NEGATIVE_MARGIN = 1.0
 
 
-class NeuralGeometry(Geometry):
+class NeuralGeometry(Geometry, Learner):
     
     def __init__(
         self,
@@ -44,9 +45,13 @@ class NeuralGeometry(Geometry):
         device: torch.device = torch.device('cpu'),
         dtype: torch.dtype = torch.float32,
         # AMBIENT DIM DISTANCE
-        d: Callable = None
+        d: Callable = None,
+        # LEARNER BUFFER
+        buffer_size: int = 1000,
     ) -> None:
-        super().__init__(dim)
+
+        Geometry.__init__(self, dim)
+        Learner.__init__(self, dim, buffer_size)
 
         self.device = device
         self.dtype = dtype
