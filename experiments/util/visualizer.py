@@ -12,14 +12,15 @@ from .xtouch_interface import XTouchInterface
 # TODO. Optimize this by using a buffer. 
 
 class Visualizer:
-  def __init__(self, interface='xtouch', defaults = {}, manifold=None, distance=None, cursor=False):
+  def __init__(self, interface='xtouch', defaults = {}, manifold=None, distance_function=None, cursor_target=None, cursor_color=None):
     self.window_width = 1000
     self.window_height = 1000
-    self.max_points = 1000
+    self.max_points = 10000
     self.manifold = manifold
-    #self.distance = lambda x, y: manifold.distance(manifold, x, y) if distance is None and manifold is not None else distance
-    self.distance = manifold.distance if distance is None and manifold is not None else distance
-    self.cursor = cursor
+    #self.distance = lambda x, y: manifold.distance_function(manifold, x, y) if distance is None and manifold is not None else distance
+    self.cursor_target = cursor_target
+    self.cursor_color = cursor_color
+    self.distance_function = distance_function 
     self.data = {}
 
     if not glfw.init():
@@ -117,7 +118,7 @@ class Visualizer:
       n_points = data['n_points']
       points = np.matmul(data['points'][:n_points], transformation_matrix)
       colors = None
-      if name == 'samples' and self.cursor and self.distance is not None:
+      if self.cursor_target is not None and self.distance_function is not None and self.cursor_target == name:
         colors = self.compute_colors(points, data['color']).tolist()
       for i, point in enumerate(points): 
         color = data['color'] if colors is None else colors[i] 
@@ -157,9 +158,11 @@ class Visualizer:
     colors = np.zeros([points.shape[0], 3])
     # TODO. Should be parallelizable.
     for i, point in enumerate(points):
-      distance = self.distance(point, closest_point)
-      color_scaling = np.max([0, 1.0 - distance * 3.0])
-      colors[i] = [color[0], color[1], 255 * color_scaling]
+      distance = self.distance_function(point, closest_point) / self.scale # We must adjust for the scale.
+      color_scaling = np.exp(3.0 * -distance)
+      #color_scaling = np.max([0, 1.0 - distance * 3.0])
+      #colors[i] = [color[0], color[1], 255 * color_scaling]
+      colors[i] = self.interpolate_color(self.cursor_color, color, color_scaling)
     return colors
 
   def render_closest_point(self, points, color):
@@ -190,3 +193,10 @@ class Visualizer:
     x = 2.0 * x / self.window_width - 1.0
     y = 2.0 * y / self.window_height - 1.0
     return x, y
+
+  def interpolate_color(self, c1, c2, alpha):
+    return [
+      c1[0] * alpha + c2[0] * (1.0 - alpha),
+      c1[1] * alpha + c2[1] * (1.0 - alpha),
+      c1[2] * alpha + c2[2] * (1.0 - alpha),
+    ]

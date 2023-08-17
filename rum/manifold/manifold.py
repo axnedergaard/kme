@@ -135,7 +135,6 @@ class Manifold(gymnasium.Env, Density, Geometry):
   def learn(self, _):
     pass
 
-#class EuclideanManifold(Manifold):
 class EuclideanManifold(Manifold):
   def __init__(self, dim, sampler):
     super(EuclideanManifold, self).__init__(dim, dim)
@@ -177,6 +176,15 @@ class EuclideanManifold(Manifold):
     elif self.sampler['type'] == 'gaussian':
       return np.random.normal(self.sampler['mean'], self.sampler['std'], self.dim)
 
+  def grid(self, n):
+    n_per_dim = int(np.power(n, 1.0 / self.dim))
+    points = np.zeros([self.dim, n_per_dim])
+    for dim in range(self.dim):
+      points[dim] = np.linspace(self.low, self.high, n_per_dim)
+    mesh = np.meshgrid(*points)
+    mesh = np.reshape(mesh, [self.dim, -1]).T
+    return mesh 
+
   @staticmethod
   def distance_function(x, y):
     return np.linalg.norm(x - y)
@@ -189,6 +197,7 @@ class EuclideanManifold(Manifold):
       raise ValueError
     else:
       return 0.0
+
 
 class SphereManifold(Manifold):
   # We assume unit radius.
@@ -229,6 +238,18 @@ class SphereManifold(Manifold):
       return self._sample_uniform(self.dim)
     elif self.sampler['type'] == 'vonmises_fisher':
       return scipy.stats.vonmises_fisher.rvs(self.sampler['mu'], self.sampler['kappa'], size=1)[0]
+
+  def grid(self, n):
+    assert self.dim == 2
+    assert self._from_local is not None
+    n_per_dim = int(np.power(n, 1.0 / self.dim))
+    local_points = np.zeros([self.dim, n_per_dim])
+    local_points[0] = np.linspace(-np.pi, np.pi, n_per_dim)
+    local_points[1] = np.linspace(-np.pi / 2, np.pi / 2, n_per_dim)
+    local_mesh = np.meshgrid(*local_points)
+    local_mesh = np.reshape(local_mesh, [self.dim, -1]).T
+    mesh = np.stack([self._from_local(local_point) for local_point in local_mesh])
+    return mesh 
       
   @staticmethod
   def distance_function(x, y):
@@ -293,6 +314,18 @@ class TorusManifold(Manifold):
     # TODO. This is wrong.
     local = np.random.uniform(-np.pi, np.pi, 2)
     return self._from_local(local)
+
+  def grid(self, n):
+    assert self.dim == 2
+    assert self._from_local is not None
+    n_per_dim = int(np.power(n, 1.0 / self.dim))
+    local_points = np.zeros([self.dim, n_per_dim])
+    local_points[0] = np.linspace(-np.pi, np.pi, n_per_dim)
+    local_points[1] = np.linspace(-np.pi, np.pi, n_per_dim)
+    local_mesh = np.meshgrid(*local_points)
+    local_mesh = np.reshape(local_mesh, [self.dim, -1]).T
+    mesh = np.stack([self._from_local(local_point) for local_point in local_mesh])
+    return mesh 
 
   def distance_function(self, x, y):
     # Based on idea that cut toroidal is a cylinder... TODO. Could be wrong.

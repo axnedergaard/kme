@@ -9,7 +9,7 @@ from util.resolver import init_resolver
 
 init_resolver()
 
-@hydra.main(config_path='config', config_name='sample', version_base='1.3')
+@hydra.main(config_path='config', config_name='run', version_base='1.3')
 def main(cfg):
   # Init config and logging.
   wandb_cfg = OmegaConf.to_container(cfg, resolve=True)

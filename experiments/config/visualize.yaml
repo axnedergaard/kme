@@ -1,0 +1,21 @@
+hydra:
+  run:
+    dir: . 
+  output_subdir: null 
+
+defaults:
+  - _self_
+  - manifold: sphere 
+  - density: kmeans
+  - override hydra/hydra_logging: disabled  
+  - override hydra/job_logging: disabled
+
+script: {}
+verbose: 0
+sampling_method: 'sample'
+ambient_dim: 3
+samples_per_iter: 100
+time_per_iter: 0.01
+interface: 'constant'
+cursor_target: null
+cursor_color: 'red'

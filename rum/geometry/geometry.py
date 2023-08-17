@@ -26,7 +26,7 @@ class Geometry():
         """
         raise NotImplementedError()
 
-    def interpolate_function(self, x: Tensor, y: Tensor, alpha: float) -> Tensor:
+    def interpolate(self, x: Tensor, y: Tensor, alpha: float) -> Tensor:
         """
         Interpolate between states x and y, using a specified weight.
         Args:
