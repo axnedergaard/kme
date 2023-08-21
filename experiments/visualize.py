@@ -1,11 +1,13 @@
 import time
 import sys
+import numpy as np
 import hydra
 import torch
 from omegaconf import DictConfig, ListConfig
 from util.visualizer import Visualizer
 from util.make import make
 from util.resolver import init_resolver
+from util.xtouch_interface import get_xtouch_interface 
 
 init_resolver()
 
@@ -34,6 +36,16 @@ def _get_color(color):
   else:
     raise ValueError('Invalid color {}'.format(color))
 
+class XTouchPolicy():
+  def __init__(self, action_space):
+    self.action_dim = action_space.shape[0]
+    parameters = [['a_{}'.format(i), action_space.low[i], action_space.high[i]] for i in range(self.action_dim)]
+    self.interface = get_xtouch_interface(parameters)
+
+  def __call__(self, state):
+    values = self.interface.get_values()
+    return np.array([values['a_{}'.format(i)] for i in range(self.action_dim)])
+
 @hydra.main(config_path='config', config_name='visualize', version_base='1.3')
 def main(cfg):
   # Prepare scripts.
@@ -61,7 +73,6 @@ def main(cfg):
   geometry = make(cfg, 'geometry')
   density = make(cfg, 'density')
   rewarder = None
-  agent = None
   visualizer = Visualizer(
     interface=cfg.interface, 
     manifold=manifold, 
@@ -69,12 +80,24 @@ def main(cfg):
     cursor_target=cfg.cursor_target if 'cursor_target' in cfg else None,
     cursor_color=_get_color(cfg.cursor_color) if 'cursor_color' in cfg else None,
   )
+  if cfg.policy == 'xtouch':
+    policy = XTouchPolicy(manifold.action_space)
+  else:
+    policy = None
 
+  state, _ = manifold.reset()
   while True:
       time_start = time.time()
 
       # Sample states.
-      if cfg.sampling_method == 'random_walk':
+      if cfg.sampling_method == 'reinforcement_learning':
+        samples = np.zeros((cfg.samples_per_iter, manifold.observation_space.shape[0]))
+        samples[0] = state
+        for i in range(cfg.samples_per_iter):
+          samples[i] = state
+          action = policy(state)
+          state, _, _, _, _ = manifold.step(action)
+      elif cfg.sampling_method == 'random_walk':
         samples = manifold.random_walk(cfg.samples_per_iter)
       else: # cfg.sampling_method == 'sample'
         samples = manifold.sample(cfg.samples_per_iter)
@@ -83,6 +106,7 @@ def main(cfg):
       # Learn.
       if density is not None:
         density.learn(samples_tensor)
+      # TODO. Learn policy if required.
 
       # Add points to render according to scripts. 
       for name, spec in scripts.items():
@@ -94,7 +118,7 @@ def main(cfg):
             geometry = geometry, 
             density = density, 
             rewarder = rewarder,
-            agent = agent,
+            policy = policy,
             samples = samples, 
             **spec['kwargs']
           )

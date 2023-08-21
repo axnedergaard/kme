@@ -1,9 +1,17 @@
 import mido
 import time
-import numpy as np
 import threading
 
 # TODO. This sometimes crashes. It is unclear if this is a mutex issue, but seems like it's not.
+
+xtouch_interface = None
+def get_xtouch_interface(parameters = {}):
+  global xtouch_interface
+  if xtouch_interface is None:
+    xtouch_interface = XTouchInterface(parameters)
+  elif parameters != {}:
+    xtouch_interface.add_parameters(parameters)
+  return xtouch_interface
 
 class XTouchInterface:
   def __init__(self, parameters, presets=None):
@@ -19,27 +27,35 @@ class XTouchInterface:
     self.input = mido.open_input(port_name)
     self.output = mido.open_output(port_name)
     
-#    self.lock = threading.Lock()
+    self.lock = threading.Lock()
 
     self.clear()
     self.presets = presets
     self.preset_index = 0
-    self.n_parameters = len(parameters)
+    self.n_parameters = 0 
     self.slider_names = []
     self.slider_low = []
     self.slider_high = []
     self.slider_values = {}
-    for index, parameter in enumerate(parameters):
-      assert parameter[2] > parameter[1]
-      self.slider_names.append(parameter[0])
-      self.slider_low.append(parameter[1])
-      self.slider_high.append(parameter[2])
-      value = (parameter[2] + parameter[1]) // 2
-      self.set_value(index, value, value_is_pitch=False)
-      self.write(parameter[0], index, 0)
+    self.add_parameters(parameters)
 
     self.thread = threading.Thread(target=self.read)
     self.thread.start()
+
+  def add_parameters(self, parameters):
+    for parameter in parameters:
+      self.add_parameter(parameter[0], parameter[1], parameter[2])
+
+  def add_parameter(self, name, low, high):
+    assert high >= low
+    index = self.n_parameters
+    self.slider_names.append(name)
+    self.slider_low.append(low)
+    self.slider_high.append(high)
+    value = (low + high) // 2
+    self.set_value(index, value, value_is_pitch=False)
+    self.write(name, index, 0)
+    self.n_parameters += 1
 
   def rescale(self, value, old_min, old_max, new_min, new_max):
     return (value - old_min) / (old_max - old_min) * (new_max - new_min) + new_min
@@ -51,9 +67,9 @@ class XTouchInterface:
     else:
       pitch = int(self.rescale(value, self.slider_low[index], self.slider_high[index], self.default_slider_low, self.default_slider_high))
     name = self.slider_names[index]
-#    self.lock.acquire()
+    self.lock.acquire()
     self.slider_values[name] = value 
-#    self.lock.release()
+    self.lock.release()
     self.write('{:.2f}'.format(value), index, 1)
     # The slider annoying going back to the last position set with output.send. 
     msg = mido.Message('pitchwheel', channel=index, pitch=pitch)
@@ -69,12 +85,13 @@ class XTouchInterface:
       self.set_value(index, value, value_is_pitch=False)
 
   def get_values(self):
-#    self.lock.acquire()
+    self.lock.acquire()
     values = self.slider_values
-#    self.lock.release()
+    self.lock.release()
     return values 
 
   def read(self):
+    print(self)
     for msg in self.input:
       if msg.type == 'pitchwheel':
         index = msg.channel

@@ -4,7 +4,7 @@ import numpy as np
 from scipy.spatial.transform import Rotation as scipy_rotation 
 
 from .constant_interface import ConstantInterface
-from .xtouch_interface import XTouchInterface
+from .xtouch_interface import get_xtouch_interface 
 
 
 # TODO. Interface sometimes crashes for unknown reason.
@@ -52,7 +52,7 @@ class Visualizer:
         ['y_angle', -180, 180],
         ['scale', 0.1, 2],
       ]
-      self.interface = XTouchInterface(parameters)
+      self.interface = get_xtouch_interface(parameters)
     else:
       changes = {
         'x_angle': 1,
