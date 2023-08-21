@@ -76,6 +76,7 @@ class Manifold(gymnasium.Env, Density, Geometry):
   def step(self, action):
     # Warning: Undefined behavior if reset not called before this.
     self.state = self._manifold_step(self.state, action, self.max_step_size)
+    self.state = np.clip(self.state, self.observation_space.low, self.observation_space.high)
     reward = 0.0
     terminated = False
     truncated = False
@@ -100,8 +101,11 @@ class Manifold(gymnasium.Env, Density, Geometry):
 
   def _manifold_step(self, state, action, max_step_size):
     action_euclidean_size = np.linalg.norm(action)
-    action_metric_size = self._metric_size(state, action) # This is a crude approximation.
-    change_local_state = max_step_size * (action_euclidean_size / action_metric_size) * action
+    if action_euclidean_size > 0.0:
+      action_metric_size = self._metric_size(state, action) # This is a crude approximation.
+      change_local_state = max_step_size * (action_euclidean_size / action_metric_size) * action
+    else:
+      change_local_state = np.zeros(self.dim)
     # Search for a chart compatible with the step.
     for chart in self.charts:
       if chart.domain_contains(state):
