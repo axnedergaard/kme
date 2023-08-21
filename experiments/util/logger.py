@@ -4,6 +4,8 @@ import omegaconf
 import torch
 import h5py
 from . import analysis
+from data import * 
+
 
 LOCAL_LOG_SCRIPTS = [
   'state'
@@ -78,7 +80,5 @@ class Logger:
     else:
       for name, value in data.items():
         path = self._get_path(name, runs)
-        with h5py.File(path, 'a') as f: 
-          f.create_dataset(name, data=value) 
+        save_data(value, path)
         #torch.save(data, self._get_path(name, runs))
-
