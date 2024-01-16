@@ -1,4 +1,4 @@
 name: 'EuclideanManifold'
-dim: ${ambient_dim} 
+dim: ${eval:'${ambient_dim} - 1'} 
 defaults:
   - sampler: uniform

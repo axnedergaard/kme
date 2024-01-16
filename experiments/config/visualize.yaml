@@ -5,17 +5,23 @@ hydra:
 
 defaults:
   - _self_
-  - manifold: sphere 
+  - manifold: torus 
   - density: kmeans
   - override hydra/hydra_logging: disabled  
   - override hydra/job_logging: disabled
 
-script: {}
+script: {
+  samples: blue,
+  grid: green,
+  surround: red,
+  kmeans_centers: purple
+}
 verbose: 0
-sampling_method: 'sample'
+sampling_method: reinforcement_learning
+policy: xtouch
 ambient_dim: 3
 samples_per_iter: 100
-time_per_iter: 0.01
-interface: 'constant'
+time_per_iter: xtouch 
+interface: xtouch
 cursor_target: null
-cursor_color: 'red'
+cursor_color: red

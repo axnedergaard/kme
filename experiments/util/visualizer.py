@@ -6,7 +6,6 @@ from scipy.spatial.transform import Rotation as scipy_rotation
 from .constant_interface import ConstantInterface
 from .xtouch_interface import get_xtouch_interface 
 
-
 # TODO. Interface sometimes crashes for unknown reason.
 # TODO. We want the y rotation to not depend on the x rotation.
 # TODO. Optimize this by using a buffer. 
@@ -42,16 +41,11 @@ class Visualizer:
     
     # Create interface.
     parameters = [
-      ['x_angle', -180, 180],
-      ['y_angle', -180, 180],
-      ['scale', 0.1, 2],
+      ['x_angle', -180, 180, 0.0],
+      ['y_angle', -180, 180, 0.0],
+      ['scale', 0.1, 2, 1.0],
     ]
     if interface == 'xtouch':
-      parameters = [
-        ['x_angle', -180, 180],
-        ['y_angle', -180, 180],
-        ['scale', 0.1, 2],
-      ]
       self.interface = get_xtouch_interface(parameters)
     else:
       changes = {

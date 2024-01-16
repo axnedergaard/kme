@@ -13,6 +13,12 @@ def get_xtouch_interface(parameters = {}):
     xtouch_interface.add_parameters(parameters)
   return xtouch_interface
 
+def get_port_name(available_ports):
+  for name in available_ports:
+    if 'INT' in name:
+      return name
+  raise Exception('XTouch port not found, available ports: %s' % str(available_ports))
+
 class XTouchInterface:
   def __init__(self, parameters, presets=None):
     self.default_slider_low = -8192
@@ -20,10 +26,9 @@ class XTouchInterface:
     self.n_channels = 8
     self.n_lcd_rows = 2
     self.n_lcd_cols = 7
-    port_name = 'X-Touch-Ext:X-Touch-Ext X-TOUCH_INT 20:0' # TODO
 
     available_ports = mido.get_output_names()
-    assert port_name in available_ports
+    port_name = get_port_name(available_ports) 
     self.input = mido.open_input(port_name)
     self.output = mido.open_output(port_name)
     
@@ -36,6 +41,7 @@ class XTouchInterface:
     self.slider_names = []
     self.slider_low = []
     self.slider_high = []
+    self.slider_default = []
     self.slider_values = {}
     self.add_parameters(parameters)
 
@@ -44,16 +50,18 @@ class XTouchInterface:
 
   def add_parameters(self, parameters):
     for parameter in parameters:
-      self.add_parameter(parameter[0], parameter[1], parameter[2])
+      self.add_parameter(*parameter)
 
-  def add_parameter(self, name, low, high):
+  def add_parameter(self, name, low, high, default=None):
     assert high >= low
     index = self.n_parameters
     self.slider_names.append(name)
     self.slider_low.append(low)
     self.slider_high.append(high)
-    value = (low + high) // 2
-    self.set_value(index, value, value_is_pitch=False)
+    if default is None:
+      default = (low + high) / 2
+    self.slider_default.append(default)
+    self.set_value(index, default, value_is_pitch=False)
     self.write(name, index, 0)
     self.n_parameters += 1
 
@@ -91,13 +99,17 @@ class XTouchInterface:
     return values 
 
   def read(self):
-    print(self)
     for msg in self.input:
       if msg.type == 'pitchwheel':
         index = msg.channel
         if index >= self.n_parameters: 
           continue
         self.set_value(index, msg.pitch)
+      elif msg.type == 'note_on':
+        if msg.note < 24 or msg.note > 31:
+          continue
+        index = msg.note - 24
+        self.set_value(index, self.slider_default[index], value_is_pitch=False)
       elif msg.type == 'control_change':
         if self.presets is None:
           continue
