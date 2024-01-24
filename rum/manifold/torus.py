@@ -9,13 +9,10 @@ class TorusManifold(Manifold):
     self.R = 2.0 / 3.0 # Radius of "inside" circle around 1-d hole. 
     self.r = 1.0 / 3.0 # Radius of "outside" circle around 2-d hole.
 
-    self.diameter = (2 * self.r + (self.R - self.r)) * np.pi # Upper bound based on traversing two "outside" and one "inside" half-circles.
-
   def retraction(self, p, v):
+    v = self.normalize(p, v)
     xi = self._to_local(p)
-    v_1_scaling = self.r / np.sqrt(p[0] ** 2 + p[1] ** 2)
-    xi[0] += v[0]
-    xi[1] += v_1_scaling * v[1] 
+    xi += v
     standardize = lambda x : (x + 2 * np.pi) % (2 * np.pi)
     xi = standardize(xi) 
     return self._from_local(xi)
@@ -38,7 +35,6 @@ class TorusManifold(Manifold):
 
   def grid(self, n):
     assert self.dim == 2
-    assert self._from_local is not None
     n_per_dim = int(np.power(n, 1.0 / self.dim))
     local_points = np.zeros([self.dim, n_per_dim])
     local_points[0] = np.linspace(-np.pi, np.pi, n_per_dim)
@@ -53,21 +49,22 @@ class TorusManifold(Manifold):
     raise NotImplementedError
 
   def metric_tensor(self, p):
+    xi = self._to_local(p)
     return np.array([
-      [(self.R + self.r * np.cos(p[1])) ** 2, 0],
-      [0, self.r ** 2]
+      [(self.R + self.r * np.cos(xi[1])) ** 2, 0.0],
+      [0.0, self.r ** 2]
     ])
 
   def implicit_function(self, p):
-    return np.sqrt(self.r**2 - (np.sqrt(p[0]**2 + p[1]**2) - self.R)**2)
+    return np.sqrt(self.r ** 2 - (np.sqrt(p[0] ** 2 + p[1] ** 2) - self.R) ** 2)
 
   def _to_local(self, p):
-    xi_0 = np.arctan2(p[2], np.sqrt(p[0]**2 + p[1]**2) - self.R)
-    xi_1 = np.arctan2(p[1], p[0])
+    xi_0 = np.arctan2(p[1], p[0])
+    xi_1 = np.arctan2(p[2], np.sqrt(p[0] ** 2 + p[1] ** 2) - self.R)
     return np.array([xi_0, xi_1])
 
   def _from_local(self, xi):
-    p_0 = (self.R + self.r * np.cos(xi[0])) * np.cos(xi[1])
-    p_1 = (self.R + self.r * np.cos(xi[0])) * np.sin(xi[1])
-    p_2 = self.r * np.sin(xi[0])
+    p_0 = (self.R + self.r * np.cos(xi[1])) * np.cos(xi[0])
+    p_1 = (self.R + self.r * np.cos(xi[1])) * np.sin(xi[0])
+    p_2 = self.r * np.sin(xi[1])
     return np.array([p_0, p_1, p_2])

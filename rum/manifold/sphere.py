@@ -1,42 +1,71 @@
 import numpy as np
 import itertools
-from .manifold import Manifold, Chart
+from .manifold import Manifold, Atlas, Chart
 from .util import sphere_sample_uniform
 
-def chart_0(p):
-  return np.array([
-    p[0] / (1 + p[2]),
-    p[1] / (1 + p[2])
-  ])
+class SphereAtlas(Atlas):
+  @staticmethod
+  def _chart_0(p):
+    return np.array([
+      p[0] / (1 + p[2]),
+      p[1] / (1 + p[2])
+    ])
 
-def chart_1(p):
-  return np.array([
-    p[0] / (1 - p[2]),
-    p[1] / (1 - p[2])
-  ])
+  @staticmethod
+  def _chart_1(p):
+    return np.array([
+      p[0] / (1 - p[2]),
+      p[1] / (1 - p[2])
+    ])
 
-def inverse_chart_0(xi):
-  a = xi[0]**2 + xi[1]**2
-  return (1 / (a + 1)) * np.array([
-    2 * xi[0],
-    2 * xi[1],
-    1 - a 
-  ])
+  @staticmethod
+  def _inverse_chart_0(xi):
+    a = xi[0]**2 + xi[1]**2
+    return (1 / (a + 1)) * np.array([
+      2 * xi[0],
+      2 * xi[1],
+      1 - a 
+    ])
 
-def inverse_chart_1(xi):
-  a = xi[0]**2 + xi[1]**2
-  return (1 / (a + 1)) * np.array([
-    2 * xi[0],
-    2 * xi[1],
-    a - 1
-  ])
+  @staticmethod
+  def _inverse_chart_1(xi):
+    a = xi[0]**2 + xi[1]**2
+    return (1 / (a + 1)) * np.array([
+      2 * xi[0],
+      2 * xi[1],
+      a - 1
+    ])
 
-def differential_chart_0(p, v):
-  return (1 / (1 + p[2]) ** 1) * v
+  @staticmethod
+  def _norm_0(p, v):
+    # TODO. Can optimize by not computing Euclidean norm.
+    return (1 + p[2]) * np.linalg.norm(v)
 
-def differential_chart_1(p, v):
-  #return (1 / (1 - p[2]) ** 1) * v
-  return - (1 / (1 - p[2]) ** 1) * v # The minus sign is less systematic but more intuitive.
+  @staticmethod
+  def _norm_1(p, v):
+    # TODO. Can optimize by not computing Euclidean norm.
+    return (1 - p[2]) * np.linalg.norm(v)
+
+  def __init__(self):
+    super(SphereAtlas, self).__init__()
+    self.charts = [
+      Chart(
+        SphereAtlas._chart_0, 
+        SphereAtlas._inverse_chart_0, 
+        SphereAtlas._norm_0,
+      ),
+      Chart(
+        SphereAtlas._chart_1, 
+        SphereAtlas._inverse_chart_1, 
+        SphereAtlas._norm_1,
+      ),
+    ]
+
+  def get_chart(self, p):
+    if p[2] >= 0:
+      return self.charts[0]
+    else:
+      return self.charts[1]
 
 class SphereManifold(Manifold):
   # We assume unit radius.
@@ -44,27 +73,7 @@ class SphereManifold(Manifold):
     assert dim == 2 
     super(SphereManifold, self).__init__(dim, dim + 1)
     self.sampler = sampler
-
-    self.charts = [
-      Chart(
-        chart_0,
-        inverse_chart_0,
-        differential_chart_0
-      ),
-      Chart(
-        chart_1,
-        inverse_chart_1,
-        differential_chart_1
-      )
-    ]
-
-    self.diameter = np.pi # Unit sphere. Note that diameter here means distance between furthest points.
-
-  def get_chart_index(self, p):
-    if p[2] >= 0:
-      return 0
-    else:
-      return 1
+    self.atlas = SphereAtlas()
 
   def starting_state(self):
     return np.array([0.0, 0.0, 1.0])
@@ -87,9 +96,6 @@ class SphereManifold(Manifold):
       return scipy.stats.vonmises_fisher.rvs(self.sampler['mu'], self.sampler['kappa'], size=1)[0]
 
   def grid(self, n):
-    assert self.dim == 2
-
-    # Using global coordinates.
     m = int(np.power(n, 1.0 / 3.0))
     points = []
     linspace = np.linspace(-1, 1, m)
@@ -100,39 +106,9 @@ class SphereManifold(Manifold):
     points = np.array(points)
     return points
 
-    # Using local coordinates.
-    #assert self._from_local is not None
-    #n_per_dim = int(np.power(n, 1.0 / self.dim))
-    #local_points = np.zeros([self.dim, n_per_dim])
-    #local_points[0] = np.linspace(-np.pi, np.pi, n_per_dim)
-    #local_points[1] = np.linspace(-np.pi / 2, np.pi / 2, n_per_dim)
-    #local_mesh = np.meshgrid(*local_points)
-    #local_mesh = np.reshape(local_mesh, [self.dim, -1]).T
-    #mesh = np.stack([self._from_local(local_point) for local_point in local_mesh])
-    #return mesh 
-
   @staticmethod
   def distance_function(x, y):
     return np.arccos(np.dot(x, y))
 
-  def metric_tensor(self, p):
-    return np.array([
-        [1.0, 0.0],
-        [0.0, np.sin(p[0])**2]
-      ])
-
   def implicit_function(self, p):
     return 1.0 - p[0]**2 - p[1]**2
-
-  def _to_local(self, p): 
-    return np.array([
-      np.arctan2(np.sqrt(p[0]**2 + p[1]**2), p[2]),
-      np.arctan2(p[1], p[0])
-    ])
-
-  def _from_local(self, xi): 
-    return np.array([
-      np.sin(xi[0]) * np.cos(xi[1]),
-      np.sin(xi[0]) * np.sin(xi[1]),
-      np.cos(xi[0])
-    ])

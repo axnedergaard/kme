@@ -1,4 +1,5 @@
 import numpy as np
+import itertools
 from .manifold import Manifold
 
 class EuclideanManifold(Manifold):
@@ -10,6 +11,9 @@ class EuclideanManifold(Manifold):
 
     if self.sampler['type'] == 'uniform':
       assert self.low <= self.sampler['low'] and self.sampler['high'] <= self.high
+
+  def retraction(self, p, v):
+    return self.step_within_ball(p, v)
 
   def starting_state(self):
     return np.zeros(self.dim)
@@ -32,13 +36,15 @@ class EuclideanManifold(Manifold):
       return np.random.normal(self.sampler['mean'], self.sampler['std'], self.dim)
 
   def grid(self, n):
+    # TODO: Could be more efficient.
     n_per_dim = int(np.power(n, 1.0 / self.dim))
-    points = np.zeros([self.dim, n_per_dim])
-    for dim in range(self.dim):
-      points[dim] = np.linspace(self.low, self.high, n_per_dim)
-    mesh = np.meshgrid(*points)
-    mesh = np.reshape(mesh, [self.dim, -1]).T
-    return mesh 
+    points = [] #= np.zeros([self.dim, n_per_dim])
+    for point in itertools.product(np.linspace(-1.0, 1.0, n_per_dim), repeat=self.dim):
+      norm = np.linalg.norm(point)
+      if norm <= 1.0:
+        points.append(point)
+    points = np.array(points)
+    return points
 
   @staticmethod
   def distance_function(x, y):

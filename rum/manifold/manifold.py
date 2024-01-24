@@ -8,25 +8,26 @@ from ..geometry import EuclideanGeometry
 from .util import sphere_sample_uniform
 
 # TODO. Sampling multiple points in one call for Euclidean and Spherical.
-# TODO. Proper implementation of hypersphere and torus (support d!=2 and use multiple charts to avoid singularities.
 # TODO. Fix sampling in torus.
 
 class Chart():
-  def __init__(self, map_, inverse_map, differential_map):
-    self.domain = None
+  def __init__(self, map_, inverse_map, norm):
     self.map = map_
     self.inverse_map = inverse_map
-    self.differential_map = differential_map
+    self.norm = norm
+
+class Atlas():
+  def get_chart(self, p):
+    raise NotImplementedError
 
 class Manifold(gymnasium.Env, Density, Geometry):
   def __init__(self, dim, ambient_dim):
     self.dim = dim
     self.ambient_dim = ambient_dim 
-    #self.max_step_size = 0.01 # Propertion of diameter of space.
-    self.max_step_size = 0.1 # Propertion of diameter of space.
+    self.max_step_size = 0.2 
     self.observation_space = gymnasium.spaces.Box(low=-1.0, high=1.0, shape=[self.ambient_dim]) 
     self.action_space = gymnasium.spaces.Box(low=-1.0, high=1.0, shape=[self.dim])
-    self.diameter = np.sqrt(8) # Movement in ambient space.
+    self.atlas = None
 
   def reset(self, seed=None):
     self.state = self.starting_state()
@@ -51,52 +52,67 @@ class Manifold(gymnasium.Env, Density, Geometry):
       accepted = False
       while not accepted:
         change_state = sphere_sample_uniform(self.dim - 1) 
-        new_state = self._manifold_step(state, change_state, step_size if step_size is not None else self.max_step_size)
-        prob_new_state = self.pdf(new_state)
-        if np.random.uniform() < prob_new_state / prob_state:
-          state = new_state 
+        updated_state = self._manifold_step(state, change_state, step_size if step_size is not None else self.max_step_size)
+        prob_updated_state = self.pdf(updated_state)
+        if np.random.uniform() < prob_updated_state / prob_state:
+          state = updated_state 
           accepted = True
       samples.append(state)
     return np.array(samples)
 
   def _manifold_step(self, state, action):
     # The manifold can define the retraction through charts or directly (e.g. when a hack is easier).
-    action_scaling = self.diameter * self.max_step_size # TODO. Can optimize by storing this.
-    chart_index = self.get_chart_index(state)
-    if chart_index != -1: 
-      chart = self.charts[chart_index]
+    scaled_action = self.max_step_size * action
+    if self.atlas is not None:
+      chart = self.atlas.get_chart(state) 
       local = chart.map(state)
-      local += chart.differential_map(state, action_scaling * action)
+      local += self.normalize(state, scaled_action, chart.norm) 
       state = chart.inverse_map(local)
       return state
     else:
-      return self.retraction(state, action_scaling * action)
+      return self.retraction(state, scaled_action)
 
-  def get_chart_index(self, state):
-    return -1
+  def norm(self, p, v): # Riemannian norm.
+    # Warning: Relies on self.metric_tensor() being implemented. Can be overridden for efficiency.
+    return np.sqrt(np.matmul(v, np.matmul(self.metric_tensor(p), v.T)))
 
-  def retraction(self, state, action):
-    return state + action # Movement in ambient space.
+  def normalize(self, p, v, norm=None):
+    # Normalize according to direction and position using Riemannian norm.
+    norm = self.norm if norm is None else norm # Use norm from metric if not provided.
+    if np.any(v != 0.0):
+      return v * np.linalg.norm(v) / norm(p, v) 
+    else:
+      return v 
 
-  def _metric_size(self, state, action):
-    return np.matmul(action, np.matmul(self.metric_tensor(state), action.T)) 
+  def step_within_ball(self, p, v):
+    updated_p = p + v
+    norm = np.linalg.norm(updated_p)
+    if norm > 1.0: # Take maximal step such that we remain within boundary.
+      #updated_p = (p + v) / norm
+      step_size = np.roots([np.dot(v, v), 2 * np.dot(p, v), np.dot(p, p) - 1]) # Roots of equation ||p + step_size * v|| = 1.
+      step_size = step_size[np.argmin(np.abs(step_size))] # One root will be close to 1, the other will have large magnitude.
+      updated_p = p + step_size * v
+    return updated_p 
+
+  def retraction(self, p, v):
+    raise NotImplementedError
 
   def starting_state(self):
     raise NotImplementedError
 
-  def pdf(self, x):
+  def pdf(self, p):
     raise NotImplementedError
 
   def sample(self):
     raise NotImplementedError
 
-  def distance_function(self, x, y):
+  def distance_function(self, p, q):
     raise NotImplementedError
 
-  def metric_tensor(self):
+  def metric_tensor(self, p):
     raise NotImplementedError
 
-  def implicit_function(self, c):
+  def implicit_function(self, p):
     raise NotImplementedError
 
   def learn(self, _):

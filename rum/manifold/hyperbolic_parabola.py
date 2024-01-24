@@ -3,21 +3,16 @@ import itertools
 from .manifold import Manifold
 
 class HyperbolicParabolaManifold(Manifold):
-  def __init__(self, dim, sampler):
-    del sampler # TODO.
-    assert dim == 2 # TODO.
+  def __init__(self, dim, sampler=None):
+    assert dim == 2 
     super(HyperbolicParabolaManifold, self).__init__(dim, dim + 1)
     self.low = -1.0 
     self.high = 1.0 
 
   def retraction(self, p, v):
-    if np.any(v != 0.0):
-      norm_v = self._metric_size(p, v / np.linalg.norm(v))
-      v /= norm_v
+    v = self.normalize(p, v)
     xi = self._to_local(p)
-    xi[0] += v[0]
-    xi[1] += v[1] 
-    xi = np.clip(xi, self.low, self.high)
+    xi = self.step_within_ball(xi, v)
     return self._from_local(xi)
 
   def starting_state(self):
@@ -46,7 +41,9 @@ class HyperbolicParabolaManifold(Manifold):
     points = []
     linspace = np.linspace(self.low, self.high, m)
     for i, j in itertools.product(linspace, repeat=2):
-      points.append(self._from_local([i, j]))
+      if np.linalg.norm([i, j]) < 1.0:
+        points.append(self._from_local([i, j]))
+      #points.append(self._from_local([i, j]))
     points = np.array(points)
     return points
 
