@@ -1,0 +1,4 @@
+name: 'HyperbolicParabolaManifold'
+dim: ${eval:'${ambient_dim} - 1'} 
+defaults:
+  - sampler: uniform
