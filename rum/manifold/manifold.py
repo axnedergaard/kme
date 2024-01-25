@@ -11,14 +11,63 @@ from .util import sphere_sample_uniform
 # TODO. Fix sampling in torus.
 
 class Chart():
-  def __init__(self, map_, inverse_map, norm):
+  def __init__(self, map_, inverse_map, norm, differential_map=None, differential_inverse_map=None):
     self.map = map_
     self.inverse_map = inverse_map
     self.norm = norm
+    self.differential_map = differential_map
+    self.differential_inverse_map = differential_inverse_map
 
 class Atlas():
   def get_chart(self, p):
     raise NotImplementedError
+
+class GeodesicManifold():
+  # Wrapper for manifold object.
+  def __init__(self, base_object, *args, **kwargs):
+    self.__dict__['base_object'] = base_object # Avoid infinite recursion on __setattr__().
+    # Action space is rotation and thrust.
+    max_angle = np.pi / 4
+    self.action_space = gymnasium.spaces.Box(low=np.array([-1.0] + [-max_angle] * (self.dim - 1)), high=np.array([1.0] + [max_angle] * (self.dim - 1))) #, shape=[self.dim])
+    self.velocity = np.array([1.0] + [0.0] * (self.dim - 1))
+
+  def parallel_transport(self, previous_state, state, vector):
+    if np.all(vector == 0): # No transport needed.
+      return vector
+
+    previous_chart = self.atlas.get_chart(previous_state)
+    chart = self.atlas.get_chart(state)
+
+    # Within position independent maps, the parallel transport is the identity and it is inefficient to compute the transformation matrix below.
+
+    state_local = chart.map(state)
+    matrix_1 = previous_chart.differential_inverse_map(state_local)
+    matrix_2 = chart.differential_map(state)
+    transform = np.matmul(matrix_2, matrix_1)
+
+    transported_vector = np.matmul(transform, vector)
+
+    return transported_vector
+
+  def rotate(self, vector, angle):
+    rotation = np.array([
+      [np.cos(angle), -np.sin(angle)],
+      [np.sin(angle), np.cos(angle)]
+    ])
+    return np.matmul(rotation, vector)
+
+  def step(self, action):
+    previous_state = self.state.copy()
+    self.velocity = self.rotate(self.velocity, action[1])
+    gym_return_values = self.base_object.step(self.velocity * action[0])
+    self.velocity = self.parallel_transport(previous_state, self.state, self.velocity)
+    return gym_return_values
+
+  def __getattr__(self, name):
+    return getattr(self.base_object, name)
+
+  def __setattr__(self, name, value):
+    return setattr(self.base_object, name, value)
 
 class Manifold(gymnasium.Env, Density, Geometry):
   def __init__(self, dim, ambient_dim):

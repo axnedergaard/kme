@@ -1,4 +1,4 @@
-from .manifold import Manifold
+from .manifold import Manifold, GeodesicManifold
 from .euclidean import EuclideanManifold
 from .sphere import SphereManifold
 from .torus import TorusManifold

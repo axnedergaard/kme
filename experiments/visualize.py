@@ -9,6 +9,7 @@ from util.make import make
 from util.resolver import init_resolver
 from util.xtouch_interface import get_xtouch_interface 
 from util import analysis
+from rum.manifold import GeodesicManifold 
 
 init_resolver()
 
@@ -109,6 +110,8 @@ def main(cfg):
 
   # Make objects.
   manifold = make(cfg, 'manifold')
+  if cfg.geodesic:
+    manifold = GeodesicManifold(manifold)
   geometry = make(cfg, 'geometry')
   density = make(cfg, 'density')
   rewarder = None
