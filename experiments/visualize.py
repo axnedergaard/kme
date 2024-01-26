@@ -38,9 +38,8 @@ def surround(manifold, policy, samples, n=25, radius=0.1, **kwargs):
   directions = np.array([radius * np.array([np.cos(a), np.sin(a)]) for a in angles])
   surrounding_states = []
   for direction in directions:
-    manifold.step(direction)
-    surrounding_states.append(np.copy(manifold.state))
-    manifold.state = state 
+    state_after_step = manifold.manifold_step(direction)
+    surrounding_states.append(state_after_step)
   return np.array(surrounding_states)
 
 def _get_color(color):
@@ -130,7 +129,7 @@ def main(cfg):
   state, _ = manifold.reset()
 
   if cfg.time_per_iter == 'xtouch':
-    xtouch_interface = get_xtouch_interface([['delay', 0.01, 10, 0.01]])
+    xtouch_interface = get_xtouch_interface([['delay', 0.001, 10, 0.01]])
     get_time_per_iter = lambda: xtouch_interface.get_values()['delay']
   elif type(cfg.time_per_iter) == float:
     get_time_per_iter = lambda: cfg.time_per_iter

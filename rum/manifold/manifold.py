@@ -7,9 +7,6 @@ from ..geometry import Geometry
 from ..geometry import EuclideanGeometry
 from .util import sphere_sample_uniform
 
-# TODO. Sampling multiple points in one call for Euclidean and Spherical.
-# TODO. Fix sampling in torus.
-
 class Chart():
   def __init__(self, map_, inverse_map, norm, differential_map=None, differential_inverse_map=None):
     self.map = map_
@@ -22,6 +19,13 @@ class Atlas():
   def get_chart(self, p):
     raise NotImplementedError
 
+class GlobalChartAtlas(Atlas):
+  def __init__(self, _map, inverse_map, norm, differential_map=None, differential_inverse_map=None):
+    self.chart = Chart(_map, inverse_map, norm, differential_map, differential_inverse_map)
+
+  def get_chart(self, p):
+    return self.chart
+
 class GeodesicManifold():
   # Wrapper for manifold object.
   def __init__(self, base_object, *args, **kwargs):
@@ -29,16 +33,20 @@ class GeodesicManifold():
     # Action space is rotation and thrust.
     max_angle = np.pi / 4
     self.action_space = gymnasium.spaces.Box(low=np.array([-1.0] + [-max_angle] * (self.dim - 1)), high=np.array([1.0] + [max_angle] * (self.dim - 1))) #, shape=[self.dim])
-    self.velocity = np.array([1.0] + [0.0] * (self.dim - 1))
+    #self.velocity = np.array([1.0] + [0.0] * (self.dim - 1))
+    self.velocity = sphere_sample_uniform(self.dim - 1)
 
   def parallel_transport(self, previous_state, state, vector):
+    # If the chart is unchanged, parallel transport in the coordinate bases is represented by the identity matrix. For changed charts, we must perform the change of basis at a given point.
     if np.all(vector == 0): # No transport needed.
       return vector
 
     previous_chart = self.atlas.get_chart(previous_state)
     chart = self.atlas.get_chart(state)
 
-    # Within position independent maps, the parallel transport is the identity and it is inefficient to compute the transformation matrix below.
+    # Coordinate transformation is not necessary if the charts are the same.
+    if previous_chart == chart: # No transport needed.
+      return vector
 
     state_local = chart.map(state)
     matrix_1 = previous_chart.differential_inverse_map(state_local)
@@ -46,6 +54,10 @@ class GeodesicManifold():
     transform = np.matmul(matrix_2, matrix_1)
 
     transported_vector = np.matmul(transform, vector)
+    
+    # Renormalization is only necessary due to approximation errors.
+    #if np.any(transported_vector != 0):
+    #  transported_vector /= np.linalg.norm(transported_vector)
 
     return transported_vector
 
@@ -85,7 +97,7 @@ class Manifold(gymnasium.Env, Density, Geometry):
   
   def step(self, action):
     # Warning: Undefined behavior if reset not called before this.
-    self.state = self._manifold_step(self.state, action)
+    self.state = self.manifold_step(self.state, action, self.max_step_size)
     self.state = np.clip(self.state, self.observation_space.low, self.observation_space.high)
     reward = 0.0
     terminated = False
@@ -101,7 +113,7 @@ class Manifold(gymnasium.Env, Density, Geometry):
       accepted = False
       while not accepted:
         change_state = sphere_sample_uniform(self.dim - 1) 
-        updated_state = self._manifold_step(state, change_state, step_size if step_size is not None else self.max_step_size)
+        updated_state = self.manifold_step(state, change_state, step_size if step_size is not None else self.max_step_size)
         prob_updated_state = self.pdf(updated_state)
         if np.random.uniform() < prob_updated_state / prob_state:
           state = updated_state 
@@ -109,20 +121,24 @@ class Manifold(gymnasium.Env, Density, Geometry):
       samples.append(state)
     return np.array(samples)
 
-  def _manifold_step(self, state, action):
-    # The manifold can define the retraction through charts or directly (e.g. when a hack is easier).
-    scaled_action = self.max_step_size * action
+  def manifold_step(self, state, action, step_size):
+    return self.retraction(state, step_size * action)
+
+  def retraction(self, p, v):
+    # Warning: Relies on self.atlas being defined.
+    # Can be overriden for efficiency.
     if self.atlas is not None:
-      chart = self.atlas.get_chart(state) 
-      local = chart.map(state)
-      local += self.normalize(state, scaled_action, chart.norm) 
-      state = chart.inverse_map(local)
-      return state
+      chart = self.atlas.get_chart(p) 
+      local = chart.map(p)
+      local += self.normalize(p, v, chart.norm) 
+      p = chart.inverse_map(local)
+      return p
     else:
-      return self.retraction(state, scaled_action)
+      raise NotImplementedError("Must define retraction or atlas.")
 
   def norm(self, p, v): # Riemannian norm.
-    # Warning: Relies on self.metric_tensor() being implemented. Can be overridden for efficiency.
+    # Warning: Relies on self.metric_tensor() being implemented. 
+    # Can be overridden for efficiency.
     return np.sqrt(np.matmul(v, np.matmul(self.metric_tensor(p), v.T)))
 
   def normalize(self, p, v, norm=None):
@@ -143,9 +159,6 @@ class Manifold(gymnasium.Env, Density, Geometry):
       updated_p = p + step_size * v
     return updated_p 
 
-  def retraction(self, p, v):
-    raise NotImplementedError
-
   def starting_state(self):
     raise NotImplementedError
 
@@ -155,13 +168,14 @@ class Manifold(gymnasium.Env, Density, Geometry):
   def sample(self):
     raise NotImplementedError
 
-  def distance_function(self, p, q):
-    raise NotImplementedError
-
-  def metric_tensor(self, p):
+  def grid(self, n):
     raise NotImplementedError
 
   def implicit_function(self, p):
+    raise NotImplementedError
+
+  def distance_function(self, p, q):
+    # Terence Tao does not know how to do this for surfaces with non-constant curvature: https://mathoverflow.net/questions/37651/riemannian-surfaces-with-an-explicit-distance-function
     raise NotImplementedError
 
   def learn(self, _):

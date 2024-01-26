@@ -124,16 +124,17 @@ class SphereManifold(Manifold):
     self.atlas = SphereAtlas()
 
   def starting_state(self):
-    return np.array([0.0, 0.0, 1.0])
+    #return np.array([0.0, 0.0, 1.0])
+    return sphere_sample_uniform(self.dim)
 
-  def pdf(self, x):
+  def pdf(self, p):
     if self.sampler['type'] == 'uniform':
-      if np.linalg.norm(x) == 1: 
+      if np.linalg.norm(p) == 1: 
         return 1 / (2 * np.pi)**(self.dim / 2) 
       else:
         return 0.0
     elif self.sampler['type'] == 'vonmises_fisher':
-      return scipy.stats.vonmises_fisher.pdf(x, self.sampler['mu'], self.sampler['kappa'])
+      return scipy.stats.vonmises_fisher.pdf(p, self.sampler['mu'], self.sampler['kappa'])
 
   def sample(self, n):
     if n > 1: # TODO.
@@ -154,9 +155,10 @@ class SphereManifold(Manifold):
     points = np.array(points)
     return points
 
-  @staticmethod
-  def distance_function(x, y):
-    return np.arccos(np.dot(x, y))
-
   def implicit_function(self, p):
     return 1.0 - p[0]**2 - p[1]**2
+
+  @staticmethod
+  def distance_function(p, q):
+    return np.arccos(np.dot(p, q))
+

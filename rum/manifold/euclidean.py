@@ -1,31 +1,31 @@
 import numpy as np
 import itertools
-from .manifold import Manifold
+from .manifold import Manifold, GlobalChartAtlas
 
 class EuclideanManifold(Manifold):
   def __init__(self, dim, sampler):
     super(EuclideanManifold, self).__init__(dim, dim)
-    self.low = -1.0 
-    self.high = 1.0 
     self.sampler = sampler 
-
-    if self.sampler['type'] == 'uniform':
-      assert self.low <= self.sampler['low'] and self.sampler['high'] <= self.high
+    identity = lambda x: x
+    self.atlas = GlobalChartAtlas(identity, identity, self.norm, identity, identity)
 
   def retraction(self, p, v):
     return self.step_within_ball(p, v)
 
+  def norm(self, p, v):
+    return np.linalg.norm(v)
+
   def starting_state(self):
     return np.zeros(self.dim)
 
-  def pdf(self, x):
+  def pdf(self, p):
     if self.sampler['type'] == 'uniform':
-      if np.all(x >= self.sampler['low']) and np.all(x <= self.sampler['high']):
+      if np.all(p >= self.sampler['low']) and np.all(p <= self.sampler['high']):
         return 1 / np.prod(self.sampler['high'] - self.sampler['low'])
       else:
         return 0.0
     elif self.sampler['type'] == 'gaussian':
-      return np.exp(-np.sum((x - self.sampler['mean'])**2) / (2 * self.sampler['std']**2)) / (np.sqrt((2 * np.pi)**self.dim) * self.sampler['std'])
+      return np.exp(-np.sum((p - self.sampler['mean'])**2) / (2 * self.sampler['std']**2)) / (np.sqrt((2 * np.pi)**self.dim) * self.sampler['std'])
 
   def sample(self, n):
     if n > 1: # TODO.
@@ -46,15 +46,12 @@ class EuclideanManifold(Manifold):
     points = np.array(points)
     return points
 
-  @staticmethod
-  def distance_function(x, y):
-    return np.linalg.norm(x - y)
-
-  def metric_tensor(self, x):
-    return np.eye(self.dim)
-
-  def implicit_function(self, c):
+  def implicit_function(self, p):
     if self.dim >= 3:
       raise ValueError
     else:
       return 0.0
+
+  @staticmethod
+  def distance_function(p, q):
+    return np.linalg.norm(p - q)

@@ -9,7 +9,10 @@ class HyperboloidManifold(Manifold):
     self.a = 2**-0.5
     self.c = 1.0
 
-  def pdf(self, x):
+  def starting_state(self):
+    return np.zeros(self.ambient_dim)
+
+  def pdf(self, p):
     raise NotImplementedError
 
   def sample(self, n):
@@ -17,19 +20,7 @@ class HyperboloidManifold(Manifold):
       return np.array([self.sample(1) for _ in range(n)])
     u = np.random.uniform(-1.0, 1.0)
     v = np.random.uniform(-np.pi, np.pi)
-    return self._from_local([u, v])
-
-  def starting_state(self):
-    return np.zeros(self.ambient_dim)
-
-  def distance_function(self, x, y):
-    raise NotImplementedError
-
-  def metric_tensor(self, x):
-    raise NotImplementedError
-
-  def implicit_function(self):
-    return self.c[0]**2 + self.c[1]**2
+    return self.inverse_map([u, v])
 
   def grid(self, n):
     m = int(np.sqrt(n))
@@ -37,15 +28,18 @@ class HyperboloidManifold(Manifold):
     linspace_1 = np.linspace(-1.0, 1.0, m)
     linspace_2 = np.linspace(-np.pi, np.pi, m)
     for i, j in itertools.product(linspace_1, linspace_2):
-      points.append(self._from_local([i, j]))
+      points.append(self.inverse_map([i, j]))
     points = np.array(points)
     return points
 
-  def _to_local(self, c):
+  def implicit_function(self, p):
+    return self.p[0]**2 + self.p[1]**2
+
+  def map(self, p):
     raise NotImplementedError
 
-  def _from_local(self, c):
-    x = self.a * np.sqrt(1 + c[0]**2) * np.cos(c[1])
-    y = self.a * np.sqrt(1 + c[0]**2) * np.sin(c[1])
-    z = self.c * c[0]
+  def inverse_map(self, xi):
+    x = self.a * np.sqrt(1 + xi[0]**2) * np.xios(xi[1])
+    y = self.a * np.sqrt(1 + xi[0]**2) * np.sin(xi[1])
+    z = self.c * xi[0]
     return np.array([x, y, z])
