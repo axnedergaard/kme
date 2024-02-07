@@ -197,13 +197,23 @@ class OnlineKMeansEstimator(Density, Learner):
             raise ValueError("States must be Tensor of shape (B,)")
         km_objective = torch.sum(distances.pow(2)) # (1,)
         return km_objective # (1,)
-
+    
+    def pdf(self, x: Tensor) -> float:
+        return self.pdf_approx(x, self.diameters)
 
     def pdf_approx(self, x: Tensor, diameters: Optional[Tensor] = None) -> Tensor:
-        raise NotImplementedError()
+        """
+        Computes the upper bound of the pdf of the k-means state
+        Params: x: (dim_states,) point at which to compute pdf
+        Returns: (1,) upper bound of the pdf
+        Time-complexity: O(k)
+        """
+        _, closest_idx = self._find_closest_cluster(x.unsqueeze(0))
+        ds = self.diameters if diameters is None else diameters
+        return self.entropic_func(1 / (ds[closest_idx[0]]))
 
 
-    def entropy(self):
+    def entropy(self) -> Tensor:
         return self.entropy_lb(self.diameters)
 
 
