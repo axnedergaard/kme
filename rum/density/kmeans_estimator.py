@@ -214,7 +214,7 @@ class OnlineKMeansEstimator(Density, Learner):
         """
         _, closest_idx = self._find_closest_cluster(x.unsqueeze(0))
         ds = self.diameters if diameters is None else diameters
-        return self.entropic_func(1 / (ds[closest_idx[0]]))
+        return self.entropic_func(1 / (ds[closest_idx[0]] + 1e-6))
 
 
     def entropy(self) -> Tensor:
