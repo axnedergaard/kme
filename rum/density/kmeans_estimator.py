@@ -2,7 +2,7 @@ from .density import Density
 from ..learner import Learner
 from ..geometry import EuclideanGeometry
 from torch import Tensor, LongTensor, FloatTensor
-from typing import Callable, Union, Optional, Tuple
+from typing import Callable, Union, Optional, Tuple, Literal
 from inspect import signature, Parameter
 import numpy as np
 import torch
@@ -134,7 +134,7 @@ class OnlineKMeansEstimator(Density, Learner):
 
     # --- Public interface methods ---
 
-    def learn(self, states: Tensor) -> None:
+    def learn(self, states: Tensor, num_passes: int = 1, shuffling: bool = True) -> None:
         """
         WARNING: Updates internal state of current object.
         Updates the k-means state given a batch of states
@@ -149,22 +149,25 @@ class OnlineKMeansEstimator(Density, Learner):
 
         # distances, _ = self._find_closest_cluster(states) # (B,)
         # objective = self.kmeans_objective(distances)
+
+        if shuffling:
+            shuffle = torch.randperm(B)
+            states = states[shuffle] # (B, dim_states)
         
-        shuffle = torch.randperm(B)
-        shuffled_states = states[shuffle] # (B, dim_states)
         n_pathological = 0
 
-        if B <= k or self.force_sparse:
-            # Centroids sequential. Diameters sparse.
-            for s in shuffled_states:
-                # Cannot be parallelized.
-                closest_idx = self._update_single(s)
-                _, _, n_patho = self._diameters_sparse(closest_idx, inplace=True)
-                n_pathological += n_patho
-        else:
-            # Centroids sequential. Diameters pairwise.
-            for s in shuffled_states: _ = self._update_single(s)
-            self._diameters_pairwise()
+        for pass_idx in range(num_passes):
+            if B <= k or self.force_sparse:
+                # Centroids sequential. Diameters sparse.
+                for s in states:
+                    # Cannot be parallelized.
+                    closest_idx = self._update_single(s)
+                    _, _, n_patho = self._diameters_sparse(closest_idx, inplace=True)
+                    n_pathological += n_patho
+            else:
+                # Centroids sequential. Diameters pairwise.
+                for s in states: _ = self._update_single(s)
+                self._diameters_pairwise()
 
         # Logging for experiments
         self.n_pathological = n_pathological
