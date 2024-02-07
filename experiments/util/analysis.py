@@ -16,10 +16,10 @@ def scale_independent_loss(x, y):
   log_diff_mean_sq = np.square(np.mean(log_diff))  # square mean log diffs to capture bias
   return squared_log_diff_mean - log_diff_mean_sq  # adjust for bias, emphasizing variance
 
-def mean_intrinsic_reward(rollouts, **kwargs):
+def intrinsic_reward(rollouts, **kwargs):
   return torch.mean(rollouts['intrinsic_rewards'])
 
-def mean_extrinsic_reward(rollouts, **kwargs):
+def extrinsic_reward(rollouts, **kwargs):
   return torch.mean(rollouts['extrinsic_rewards'])
 
 def pathological_updates(density, **kwargs):
