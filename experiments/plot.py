@@ -21,9 +21,10 @@ def get_script_fns(cfg):
 def main(cfg):
   # Load the data.
   data = []
-  if not isinstance(cfg.exp_names, list):
-    cfg.exp_names = [cfg.exp_names]
-  for exp_name in cfg.exp_names: 
+  exp_names = omegaconf.OmegaConf.to_container(cfg.exp_names, resolve=True)
+  if not isinstance(exp_names, list):
+    exp_names = [exp_names]
+  for exp_name in exp_names:
     exp_data = load_experiment_data(exp_name, local=cfg.local)
     data.append(exp_data)
   print('Loaded data.')

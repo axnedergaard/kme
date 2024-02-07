@@ -2,6 +2,9 @@ from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 import numpy as np
 
+COLORS = ['#1f77b4', '#ff7f0e', '#d62728',  '#2ca02c', '#9467bd']
+CONFIDENCE_COLORS = ['#aec7e8', '#ffbb78', '#ff9896', '#98df8a', '#c5b0d5']
+
 
 def dummy(data, **kwargs):
   entropy = data[0]['entropy']
@@ -20,10 +23,10 @@ def plot_with_confidence_interval(
 ):
     """
     Plot the mean of the given data with a confidence interval
-    :params: x (np.ndarray): The y-axis group data shape (T,)
-    :params: y (np.ndarray): The x-axis group data shape (B, T)
+    :params: x (np.ndarray): The x-axis group data shape (T,)
+    :params: y (np.ndarray): The y-axis group data shape (B, T)
     """
-    assert y.dim() == 2 and x.dim() == 1 and x.shape[0] == y.shape[1]
+    assert len(x.shape) == 1 and len(y.shape) == 2 and x.shape[0] == y.shape[1]
     mean = np.mean(y, axis=0)
     percentiles = np.percentile(y, [low_perc, high_perc], axis=0)
     color = color if color else "black"
@@ -31,42 +34,53 @@ def plot_with_confidence_interval(
     ax.fill_between(x, percentiles[0], percentiles[1], color=color, alpha=0.3)
 
 
-def extinsic_rewards_vs_steps_single_env(data, env: str, ax: Axes = None, **kwargs):
+def extrinsic_rewards_vs_steps_single_env(data, ax: Axes = None, **kwargs):
     """
     Plot the extrinsic rewards vs steps with confidence interval
     :params: data (undefined) : The data to plot
-    :params: env (str) : The environment to plot
     """
 
     def extract_and_format_data(data, **kwargs):
-        out = []
-        for group in data:
-            timesteps = np.ndarray([])  # (T,)
-            rewards = np.ndarray([[]])  # (B, T)
-            color = "color for the group"
-            label = "label for the group"
-            out.append((timesteps, rewards, color, label))
+        
+        groups = {}
 
-        # return out
-        raise NotImplementedError()
+        for exp_data in data:
+            group_key = exp_data.config["rewarder"]["name"]
+            rewards = exp_data["extrinsic_reward"]
+            if group_key not in groups:
+                groups[group_key] = {"rewards": []}
+            groups[group_key]["rewards"].append(rewards)
+
+        for idx, (group_key, _) in enumerate(groups.items()):
+            groups[group_key]["color"] = COLORS[idx]
+
+        timesteps = data[0]["time/total_timesteps"]
+
+        return [
+            (timesteps, np.array(group["rewards"]), group["color"], group_key)
+            for group_key, group in groups.items()
+        ]
 
     if ax is None:
         fig, ax = plt.subplots()
+
+    config = data[0].config
+    env = config["manifold"]["name"]
 
     for timesteps, rewards, color, label in extract_and_format_data(data, **kwargs):
         plot_with_confidence_interval(ax, timesteps, rewards, color, label)
 
     ax.set_xlabel("Timesteps")
     ax.set_ylabel("Extrinsic Reward")
-    ax.title(f"{env} (Run Sparse)")
+    ax.set_title(f"{env} (Run Sparse)")
 
-    if "grid" not in kwargs and not kwargs["grid"]:
-        # by default the grid is shown
-        ax.grid(visible=True)
+    # if "grid" not in kwargs and not kwargs["grid"]:
+    #     # by default the grid is shown
+    #     ax.set_grid(visible=True)
 
-    if "legend" not in kwargs and not kwargs["legend"]:
-        # by default the legend is shown
-        ax.legend(loc="upper left")
+    # if "legend" not in kwargs and not kwargs["legend"]:
+    #     # by default the legend is shown
+    #     ax.set_legend(loc="upper left")
 
     return fig
 
@@ -85,7 +99,7 @@ def extinsic_rewards_vs_steps_multiple_envs(data, **kwargs):
 
     envs, data = extract_and_format_data(data, **kwargs)
     for i, (env, data) in enumerate(zip(envs, data)):
-        extinsic_rewards_vs_steps_single_env(
+        extrinsic_rewards_vs_steps_single_env(
             data, env, ax=axs[i], legend=(i == 0), **kwargs
         )
 

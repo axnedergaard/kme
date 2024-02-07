@@ -18,10 +18,11 @@ def main(cfg):
 
   # Make learning objects.
   manifold = make(cfg, 'manifold')
-  if cfg.rewarder is not None:
+  if cfg.rewarder != {}:
     rewarder = make(cfg, 'rewarder') 
     density = rewarder.kmeans
   else:
+    rewarder = None
     if 'density' in cfg and cfg.density is not None:
       density = make(cfg, 'density')
     else:

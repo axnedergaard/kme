@@ -28,8 +28,12 @@ def pathological_updates(density, **kwargs):
 def entropy(density, **kwargs):
   return density.entropy().item()
 
-def kmeans_loss(density, **kwargs):
-  return density.kmeans_loss().item()
+def kmeans_loss(density, manifold, n=100, **kwargs):
+  # TODO. THIS IS BROKEN
+  samples = torch.Tensor(manifold.sample(n))
+  l = density._find_closest_cluster(samples)
+  distances = [x[0] for x in l]
+  return density.kmeans_objective(distances).item()
 
 def kmeans_count_variance(density, **kwargs):
   cluster_sizes = density.cluster_sizes.item()
