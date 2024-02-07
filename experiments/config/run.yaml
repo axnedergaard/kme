@@ -15,8 +15,7 @@ defaults:
   - geometry: neural
   - rewarder: kmeans 
 
-script:
-  mean_intrinsic_reward: 1
+script: {}
 
 n_envs: 1
 max_samples: 1000

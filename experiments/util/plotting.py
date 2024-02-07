@@ -3,6 +3,12 @@ from matplotlib.axes import Axes
 import numpy as np
 
 
+def dummy(data, **kwargs):
+  entropy = data[0]['entropy']
+  fig, ax = plt.subplots()
+  ax.plot(entropy)
+  return fig
+
 def plot_with_confidence_interval(
     ax: Axes,
     x: np.ndarray,
