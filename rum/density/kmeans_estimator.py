@@ -128,6 +128,9 @@ class OnlineKMeansEstimator(Density, Learner):
         self.diameters = torch.min(m, dim=1).values # (k,)
         self.closest_idx = torch.argmin(m, dim=1) # (k,)
 
+        # Logging for experiments
+        self.n_pathological = 0
+
 
     # --- Public interface methods ---
 
@@ -163,7 +166,8 @@ class OnlineKMeansEstimator(Density, Learner):
             for s in shuffled_states: _ = self._update_single(s)
             self._diameters_pairwise()
 
-        # TODO: wandb.log metrics here
+        # Logging for experiments
+        self.n_pathological = n_pathological
 
 
     def simulate_step(self, state: Tensor) -> Tensor:
