@@ -86,3 +86,115 @@ def extinsic_rewards_vs_steps_multiple_envs(data, **kwargs):
     plt.tight_layout()
 
     return fig
+
+
+def kmeans_loss_vs_k(data, **kwargs):
+    """
+    Plot the kmeans loss vs k with confidence interval
+    :params: data (undefined) : The data to plot
+    """
+
+    def extract_and_format_data(data, **kwargs):
+        raise NotImplementedError()
+
+    fig, ax = plt.subplots()
+    k, kmeans_loss, color, label = extract_and_format_data(data, **kwargs)
+    plot_with_confidence_interval(ax, k, kmeans_loss, color, label)
+
+    ax.set_xlabel("K")
+    ax.set_ylabel("Kmeans objective")
+    ax.title("Kmeans Loss vs K")
+
+    if "grid" not in kwargs and not kwargs["grid"]:
+        # by default the grid is shown
+        ax.grid(visible=True)
+
+    if "legend" not in kwargs and not kwargs["legend"]:
+        # by default the legend is shown
+        ax.legend(loc="upper left")
+
+    return fig
+
+
+def count_variance_vs_beta(data, **kwargs):
+    """
+    Plot the count variance vs beta with confidence interval
+    :params: data (undefined) : The data to plot
+    """
+
+    def extract_and_format_data(data, **kwargs):
+        raise NotImplementedError()
+
+    fig, ax = plt.subplots()
+    beta, count_variance, color, label = extract_and_format_data(data, **kwargs)
+    plot_with_confidence_interval(ax, beta, count_variance, color, label)
+
+    ax.set_xlabel("Beta")
+    ax.set_ylabel("Count Variance")
+    ax.title("Count Variance vs Beta")
+
+    if "grid" not in kwargs and not kwargs["grid"]:
+        # by default the grid is shown
+        ax.grid(visible=True)
+
+    if "legend" not in kwargs and not kwargs["legend"]:
+        # by default the legend is shown
+        ax.legend(loc="upper left")
+
+    return fig
+
+
+def scale_independent_loss_pdf_vs_steps(data, **kwargs):
+    """
+    Plot the scale independant loss pdf vs steps with confidence interval
+    :params: data (undefined) : The data to plot
+    """
+
+    def extract_and_format_data(data, **kwargs):
+        raise NotImplementedError()
+
+    fig, ax = plt.subplots()
+    steps, scale_independant_loss_pdf, color, label = extract_and_format_data(data, **kwargs)
+    plot_with_confidence_interval(ax, steps, scale_independant_loss_pdf, color, label)
+
+    ax.set_xlabel("Steps")
+    ax.set_ylabel("Scale Independant Loss PDF")
+    ax.title("Scale Independant Loss PDF vs Steps")
+
+    if "grid" not in kwargs and not kwargs["grid"]:
+        # by default the grid is shown
+        ax.grid(visible=True)
+
+    if "legend" not in kwargs and not kwargs["legend"]:
+        # by default the legend is shown
+        ax.legend(loc="upper left")
+
+    return fig
+
+
+def scale_independent_loss_distance_vs_steps(data, **kwargs):
+    """
+    Plot the scale independant loss distance vs steps with confidence interval
+    :params: data (undefined) : The data to plot
+    """
+
+    def extract_and_format_data(data, **kwargs):
+        raise NotImplementedError()
+
+    fig, ax = plt.subplots()
+    steps, scale_independant_loss_distance, color, label = extract_and_format_data(data, **kwargs)
+    plot_with_confidence_interval(ax, steps, scale_independant_loss_distance, color, label)
+
+    ax.set_xlabel("Steps")
+    ax.set_ylabel("Scale Independant Loss Distance")
+    ax.title("Scale Independant Loss Distance vs Steps")
+
+    if "grid" not in kwargs and not kwargs["grid"]:
+        # by default the grid is shown
+        ax.grid(visible=True)
+
+    if "legend" not in kwargs and not kwargs["legend"]:
+        # by default the legend is shown
+        ax.legend(loc="upper left")
+
+    return fig
