@@ -2,7 +2,6 @@ from .rewarder import Rewarder
 from ..density import OnlineKMeansEstimator
 from typing import Callable, Union, Optional, Tuple
 from torch import Tensor, FloatTensor, LongTensor
-from stable_baselines3.common.buffers import RolloutBuffer
 import concurrent.futures
 from enum import Enum
 import numpy as np
@@ -22,7 +21,7 @@ class KMERewarder(Rewarder):
         distance_func: Callable = None,
         origin: Union[Tensor, np.ndarray] = None,
         init_method: str = 'uniform',
-        homeostatis: bool = True,
+        homeostasis: bool = True,
         # KME REWARDER HYPERPARAMS
         entropic_func: str = 'exponential',
         power_fn_exponent: float = 0.5,
@@ -50,57 +49,64 @@ class KMERewarder(Rewarder):
 
         # underlying kmeans density estimator
         self.kmeans = OnlineKMeansEstimator(
-            k, dim_states, learning_rate, balancing_strength,
-            distance_func, origin, init_method, homeostatis
+            k, 
+            dim_states, 
+            homeostasis=homeostasis,
+            learning_rate=learning_rate, 
+            balancing_strength=balancing_strength,
+            distance_func=distance_func, 
+            origin=origin, 
+            init_method=init_method, 
         )
 
 
-    def reward(self, buffer: RolloutBuffer) -> FloatTensor:
-        if not isinstance(buffer, RolloutBuffer):
-            raise TypeError("Buffer must be an instance of RolloutBuffer")
-        n_steps, n_envs = buffer.buffer_size, buffer.num_envs
-        states = buffer.observations.view(n_steps * n_envs, self.dim_states)
-        return self._reward(states).view(n_steps, n_envs)
+    def reward_function(self, states: Tensor) -> FloatTensor:
+        if states.dim() == 2:
+          return self._reward_function(states)
+        else:
+          num_steps, num_envs, num_dims = states.shape
+          states = states.view(num_steps * num_envs, num_dims)
+          rewards = self._reward_function(states)
+          return rewards.view(num_steps, num_envs)
 
 
-    def _reward(self, states: Tensor) -> FloatTensor:
-        if not isinstance(states, Tensor) or states.dim() != 2:
+    def _reward_function(self, states: Tensor) -> FloatTensor:
+        if not isinstance(states, Tensor): #or states.dim() != 2:
             raise ValueError("States must be of shape (B, dim_states)")
 
-        def f(self, state: Tensor, rew_type: str) -> FloatTensor:
-            km, assign_idx, diameters = self.kmeans.simulate_step(state)
+        def f(state: Tensor) -> FloatTensor:
+            #km, assign_idx, diameters = self.kmeans.simulate_step(state)
+            diameters = self.kmeans.simulate_step(state)
             entropy_lb = self.kmeans.entropy_lb(diameters)
-            return self._compute_reward(entropy_lb, rew_type)
+            return self._compute_reward(entropy_lb)
         
-        rewards = torch.zeros(states.size(0)) # shape: (B,)
-        num_threads = min(states.size(0), self.num_threads)
 
-        with concurrent.futures.ProcessPoolExecutor(max_workers=num_threads) as executor:
-            for i, rew in enumerate(executor.map(lambda s: f(s), states)):
-                rewards[i] = rew
+        rewards = torch.zeros(states.size(0)) # shape: (B,)
+        #num_threads = min(states.size(0), self.num_threads)
+        #with concurrent.futures.ProcessPoolExecutor(max_workers=num_threads) as executor:
+        #    for i, rew in enumerate(executor.map(lambda s: f(s), states)):
+       #         rewards[i] = rew
+        for i, state in enumerate(states):
+          rewards[i] = f(state)
         
         return rewards # shape: (B,)
 
 
-    def _compute_reward(self, entropy_lb: Tensor, rew_type: str) -> FloatTensor:
+    def _compute_reward(self, entropy_lb: Tensor) -> FloatTensor:
         r = entropy_lb
         reward = r - self.entropy_buff if self.differential else r
         if self.differential: self.entropy_buff = r
         return reward
 
 
-    def learn(self, buffer: RolloutBuffer, update_type: str) -> FloatTensor:
-        if not isinstance(buffer, RolloutBuffer):
-            raise TypeError("Buffer must be an instance of RolloutBuffer")
-        n_steps, n_envs = buffer.buffer_size, buffer.num_envs
-        states = buffer.observations.view(n_steps * n_envs, self.dim_states)
-        self._learn(states, update_type)
+    def learn(self, states: Tensor) -> FloatTensor:
+        self._learn(states)
 
 
-    def _learn(self, states: Tensor, update_type: str) -> None:
+    def _learn(self, states: Tensor) -> None:
         if not isinstance(states, Tensor) or states.dim() != 2:
             raise ValueError("States must be of shape (B, dim_states)")
-        self.kmeans.update(states, update_type)
+        self.kmeans.learn(states)
         # shuffle_idx = torch.randperm(states.size(0))
         # shuffled_states = states[shuffle_idx]
 

@@ -11,11 +11,16 @@ hydra:
 defaults:
   - _self_
   - manifold: sphere 
-  - density: kmeans
+  - density: null 
   - geometry: neural
+  - rewarder: kmeans 
 
+script:
+  mean_intrinsic_reward: 1
+
+n_envs: 1
 max_samples: 1000
 samples_per_iter: 100
 
 ambient_dim: 3
-sampling_method: 'sample'
+sampling_method: 'reinforcement_learning'

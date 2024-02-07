@@ -12,7 +12,7 @@ defaults:
   - override hydra/job_logging: disabled
 
 script: {
-  samples: red,
+  states: red,
   grid: green,
     #surround: red,
     #kmeans_centers: blue 
@@ -20,10 +20,10 @@ script: {
 verbose: 0
 sampling_method: reinforcement_learning
 geodesic: false
-policy: xtouch
+policy: random 
 ambient_dim: 3
 samples_per_iter: 1
-time_per_iter: xtouch 
-interface: xtouch
+time_per_iter: 0.01 
+interface: random 
 cursor_target: null
 cursor_color: red

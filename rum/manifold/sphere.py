@@ -140,7 +140,7 @@ class SphereManifold(Manifold):
     if n > 1: # TODO.
       return np.array([self.sample(1) for _ in range(n)])
     if self.sampler['type'] == 'uniform':
-      return sample_uniform(self.dim)
+      return sphere_sample_uniform(self.dim)
     elif self.sampler['type'] == 'vonmises_fisher':
       return scipy.stats.vonmises_fisher.rvs(self.sampler['mu'], self.sampler['kappa'], size=1)[0]
 

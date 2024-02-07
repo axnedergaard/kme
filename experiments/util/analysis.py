@@ -1,5 +1,10 @@
+import torch
+
 def scale_independent_loss(x, y):
   return np.mean(np.abs(x - y)) # TODO. Implement properly.
+
+def mean_intrinsic_reward(rollouts, **kwargs):
+  return torch.mean(rollouts['intrinsic_rewards'])
 
 def entropy(density, **kwargs):
   return density.entropy()

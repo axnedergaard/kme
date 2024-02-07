@@ -49,7 +49,7 @@ class OnlineKMeansEstimator(Density, Learner):
         k: int,
         dim_states: int,
         # learning hyperparameters
-        homeostatis: bool = True,
+        homeostasis: bool = True,
         force_sparse: bool = True,
         init_method: str = DEFAULT_INIT,
         learning_rate: float = DEFAULT_LR,
@@ -99,7 +99,7 @@ class OnlineKMeansEstimator(Density, Learner):
         # Hyperparameters
         self.lr: float = learning_rate
         self.bs: float = balancing_strength
-        self.homeostatis: bool = homeostatis
+        self.homeostasis: bool = homeostasis
         self.force_sparse: bool = force_sparse
         self.entropic_func = entropic_func if entropic_func is not None \
             else EntropicFunction("log", eps=1e-9)
@@ -281,7 +281,7 @@ class OnlineKMeansEstimator(Density, Learner):
         s, cs = state, self.centroids  # s(1, dim_states) cs(k, dim_states) 
         distances: Tensor = self.distance_func(s, cs).view(-1) # distances(k,)
 
-        if self.homeostatis:
+        if self.homeostasis:
             mean = torch.mean(self.cluster_sizes)
             adj = self.bs * (self.cluster_sizes - mean)
             distances += adj # TODO. Clip to 0?

@@ -1,11 +1,11 @@
 import os
+import types
 import wandb
 import omegaconf
 import torch
 import h5py
 from . import analysis
-from data import * 
-
+from .data import * 
 
 LOCAL_LOG_SCRIPTS = [
   'state'
@@ -45,7 +45,7 @@ class Logger:
     self.verbose = verbose
     self.runs = 0
 
-  def run_scripts(self, samples):
+  def run_scripts(self, rollouts):
     self.runs += 1
     for name, spec in self.script.items():
       if self.runs % spec['freq'] == 0: # Run script.
@@ -57,7 +57,7 @@ class Logger:
             density = self.density, 
             rewarder = self.rewarder,
             agent = self.agent,
-            samples = samples, 
+            rollouts = rollouts, 
             **spec['kwargs'])
         # TODO. We currently do not do any data conversion, which could be inefficient.
         self.log({name: data}, use_wandb=not spec['local'], runs=spec['runs'])
@@ -82,3 +82,15 @@ class Logger:
         path = self._get_path(name, runs)
         save_data(value, path)
         #torch.save(data, self._get_path(name, runs))
+
+  def wrap_sb3_logger(self, sb3_logger):
+    # Wrap SB3 logger to also log using our logger.
+    sb3_logger._record = sb3_logger.record
+
+    def record(obj, key, value, exclude=None):
+      self.log({key: value})
+      obj._record(key, value, exclude)
+
+    sb3_logger.record = types.MethodType(record, sb3_logger)
+    sb3_logger.run_scripts = lambda rollouts : self.run_scripts(rollouts)
+    return sb3_logger

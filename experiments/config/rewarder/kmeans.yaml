@@ -1,0 +1,5 @@
+name: 'KMERewarder'
+k: 300
+dim_states: ${ambient_dim}
+learning_rate: 0.1
+balancing_strength: 0.01

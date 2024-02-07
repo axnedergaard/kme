@@ -16,8 +16,8 @@ init_resolver()
 def kmeans_centers(density, **kwargs):
   return density.centroids
 
-def samples(samples, **kwargs):
-  return samples
+def states(rollout, **kwargs):
+  return rollout['states'] 
 
 def grid(manifold, n=1000, **kwargs):
   return manifold.grid(n)
@@ -32,7 +32,7 @@ def lower_grid(manifold, n=1000, **kwargs):
   points = np.array([p for p in points if p[2] <= 0])
   return points
 
-def surround(manifold, policy, samples, n=25, radius=0.1, **kwargs):
+def surround(manifold, policy, n=25, radius=0.1, **kwargs):
   state = np.copy(manifold.state) 
   angles = np.linspace(0, 2*np.pi, n)
   directions = np.array([radius * np.array([np.cos(a), np.sin(a)]) for a in angles])
@@ -170,7 +170,7 @@ def main(cfg):
             density = density, 
             rewarder = rewarder,
             policy = policy,
-            samples = samples, 
+            rollout = {'states': samples}, 
             **spec['kwargs']
           )
           if not spec['persist']:
