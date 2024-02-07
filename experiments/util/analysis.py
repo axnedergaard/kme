@@ -1,8 +1,20 @@
 import torch
 import numpy as np
 
+def mae_loss(x, y):
+  return np.mean(np.abs(x - y))
+
+def mse_loss(x, y):
+  return np.mean(np.square(x - y))
+
 def scale_independent_loss(x, y):
-  return np.mean(np.abs(x - y)) # TODO. Implement properly.
+  x = np.array(x, dtype=np.float32)
+  y = np.array(y, dtype=np.float32)
+  log_diff = np.log(x + 1e-6) - np.log(y + 1e-6)
+  squared_log_diff = np.square(log_diff)  # square log diffs to emphasize larger errors
+  squared_log_diff_mean = np.mean(squared_log_diff)  # avg squared log diffs for overall error
+  log_diff_mean_sq = np.square(np.mean(log_diff))  # square mean log diffs to capture bias
+  return squared_log_diff_mean - log_diff_mean_sq  # adjust for bias, emphasizing variance
 
 def mean_intrinsic_reward(rollouts, **kwargs):
   return torch.mean(rollouts['intrinsic_rewards'])
