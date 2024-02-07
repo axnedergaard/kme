@@ -1,6 +1,6 @@
 from .rewarder import Rewarder
 from ..density import OnlineKMeansEstimator
-from typing import Callable, Union, Optional, Tuple
+from typing import Callable, Union, Optional, Tuple, Literal
 from torch import Tensor, FloatTensor, LongTensor
 import concurrent.futures
 from enum import Enum
@@ -46,6 +46,7 @@ class KMERewarder(Rewarder):
         self.k = k
         self.differential: bool = differential
         self.entropy_buff = 0.0 # store previous entropy
+        self.pdf_approx_buff = 0.0 # store previous pdf approx
 
         # underlying kmeans density estimator
         self.kmeans = OnlineKMeansEstimator(
@@ -70,33 +71,40 @@ class KMERewarder(Rewarder):
           return rewards.view(num_steps, num_envs)
 
 
-    def _reward_function(self, states: Tensor) -> FloatTensor:
+    def _reward_function(self, states: Tensor, form: Literal['entropy', 'information'] = 'entropy') -> FloatTensor:
         if not isinstance(states, Tensor): #or states.dim() != 2:
             raise ValueError("States must be of shape (B, dim_states)")
 
-        def f(state: Tensor) -> FloatTensor:
+        def reward_entropy(state: Tensor) -> FloatTensor:
             #km, assign_idx, diameters = self.kmeans.simulate_step(state)
             diameters = self.kmeans.simulate_step(state)
             entropy_lb = self.kmeans.entropy_lb(diameters)
-            return self._compute_reward(entropy_lb)
+            reward = entropy_lb - self.entropy_buff if self.differential else entropy_lb
+            if self.differential: self.entropy_buff = reward
+            return reward
         
+        def reward_information(state: Tensor) -> FloatTensor:
+            diameters = self.kmeans.diameters
+            pdf_approx = self.kmeans.pdf_approx(state, diameters)
+            reward = pdf_approx - self.pdf_approx_buff if self.differential else pdf_approx
+            if self.differential: self.pdf_approx_buff = reward
+            return reward
 
         rewards = torch.zeros(states.size(0)) # shape: (B,)
         #num_threads = min(states.size(0), self.num_threads)
         #with concurrent.futures.ProcessPoolExecutor(max_workers=num_threads) as executor:
         #    for i, rew in enumerate(executor.map(lambda s: f(s), states)):
        #         rewards[i] = rew
+        
         for i, state in enumerate(states):
-          rewards[i] = f(state)
+            if form == 'entropy':
+                rewards[i] = reward_entropy(state)
+            elif form == 'information':
+                rewards[i] = reward_information(state)
+            else:
+                raise ValueError("form must be either 'entropy' or 'information'")
         
         return rewards # shape: (B,)
-
-
-    def _compute_reward(self, entropy_lb: Tensor) -> FloatTensor:
-        r = entropy_lb
-        reward = r - self.entropy_buff if self.differential else r
-        if self.differential: self.entropy_buff = r
-        return reward
 
 
     def learn(self, states: Tensor) -> FloatTensor:
