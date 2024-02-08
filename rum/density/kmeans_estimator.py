@@ -1,6 +1,6 @@
 from .density import Density
 from ..learner import Learner
-from ..geometry import EuclideanGeometry
+from ..geometry import Geometry, EuclideanGeometry
 from torch import Tensor, LongTensor, FloatTensor
 from typing import Callable, Union, Optional, Tuple, Literal
 from inspect import signature, Parameter
@@ -57,8 +57,7 @@ class OnlineKMeansEstimator(Density, Learner):
         origin: Union[Tensor, np.ndarray] = None,
         entropic_func: EntropicFunction = None,
         # manifold geometry functions
-        distance_func: Callable = None,
-        interpolate_func: Callable = None,
+        geometry: Geometry = EuclideanGeometry,
         # torch device and dtype
         device: torch.device = torch.device('cpu'),
         dtype: torch.dtype = torch.float32,
@@ -105,17 +104,12 @@ class OnlineKMeansEstimator(Density, Learner):
             else EntropicFunction("log", eps=1e-9)
 
         # Underlying manifold geometry functions
-        self.distance_func: Callable = distance_func if distance_func is not None \
-            else EuclideanGeometry(dim_states).distance_function
-        
-        self.interpolate_func: Callable = interpolate_func if interpolate_func is not None \
-            else EuclideanGeometry(dim_states).interpolate
-
-        params = signature(self.distance_func).parameters
+        self.geometry = geometry
+        params = signature(self.geometry.distance_function).parameters
         if [x[0] for x in list(params.items())] != ['x', 'y']:
             raise ValueError("Distance function must take parameters (x, y)")
         
-        params = signature(self.interpolate_func).parameters
+        params = signature(self.geometry.interpolate).parameters
         if [x[0] for x in list(params.items())] != ['x', 'y', 'alpha']:
             raise ValueError("Interpolate function must take parameters (x, y, alpha)")
 
@@ -296,7 +290,7 @@ class OnlineKMeansEstimator(Density, Learner):
             raise ValueError("State must be of shape (1, dim_states)")
         
         s, cs = state, self.centroids  # s(1, dim_states) cs(k, dim_states) 
-        distances: Tensor = self.distance_func(s, cs).view(-1) # distances(k,)
+        distances: Tensor = self.geometry.distance_function(s, cs).view(-1) # distances(k,)
 
         if self.homeostasis:
             mean = torch.mean(self.cluster_sizes)
@@ -318,7 +312,7 @@ class OnlineKMeansEstimator(Density, Learner):
         if not isinstance(closest_idx, Tensor) or closest_idx.shape != (1,):
             raise ValueError("Closest_idx must be of shape (1,)")
         c = self.centroids[closest_idx].reshape(-1) # (dim_states,)
-        return self.interpolate_func(c, state, self.lr) # (dim_states,)
+        return self.geometry.interpolate(c, state, self.lr) # (dim_states,)
 
 
     # --- kMeans diameters private methods ---
@@ -343,7 +337,7 @@ class OnlineKMeansEstimator(Density, Learner):
 
         # 1) Compute distances from the updated centroid to all others
         centroid = centroids[updated_idx]  # (1, dim_states)
-        new_diameters = self.distance_func(centroid, centroids)  # (k,)
+        new_diameters = self.geometry.distance_function(centroid, centroids)  # (k,)
         new_diameters[updated_idx] = float('inf')  # exclude updated centroid itself
 
         # 2) Update closest distances and idx of updated centroid
@@ -375,7 +369,7 @@ class OnlineKMeansEstimator(Density, Learner):
                 # Avoiding parallelization here due to the overhead from spawning threads
                 # n_pathological is about 1-2% of k, making parallelism less beneficial
                 c = self.centroids[idx]  # (1, dim_states)
-                d = self.distance_func(c, centroids)  # (k,)
+                d = self.geometry.distance_function(c, centroids)  # (k,)
                 d[idx] = float('inf')  # exclude centroid itself
                 min_val, min_idx = torch.min(d, dim=0)
                 patho_diameters[i] = min_val

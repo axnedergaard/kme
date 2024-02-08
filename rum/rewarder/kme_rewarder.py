@@ -14,14 +14,7 @@ class KMERewarder(Rewarder):
     def __init__(
         self,
         # KM DENSITY ESTIMATOR
-        k: int,
-        dim_states: int,
-        learning_rate: float,
-        balancing_strength: float,
-        distance_func: Callable = None,
-        origin: Union[Tensor, np.ndarray] = None,
-        init_method: str = 'uniform',
-        homeostasis: bool = True,
+        density: OnlineKMeansEstimator,
         # KME REWARDER HYPERPARAMS
         entropic_func: str = 'exponential',
         power_fn_exponent: float = 0.5,
@@ -43,22 +36,12 @@ class KMERewarder(Rewarder):
             # Use the number of CPU cores if on CPU
             self.num_threads = os.cpu_count()
 
-        self.k = k
         self.differential: bool = differential
         self.entropy_buff = 0.0 # store previous entropy
         self.pdf_approx_buff = 0.0 # store previous pdf approx
 
-        # underlying kmeans density estimator
-        self.kmeans = OnlineKMeansEstimator(
-            k, 
-            dim_states, 
-            homeostasis=homeostasis,
-            learning_rate=learning_rate, 
-            balancing_strength=balancing_strength,
-            distance_func=distance_func, 
-            origin=origin, 
-            init_method=init_method, 
-        )
+        # Underlying kmeans density estimator
+        self.kmeans = density 
 
 
     def reward_function(self, states: Tensor) -> FloatTensor:

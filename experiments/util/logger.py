@@ -12,7 +12,7 @@ LOCAL_LOG_SCRIPTS = [
 ]
 
 class Logger:
-  def __init__(self, cfg, manifold, geometry, density, rewarder=None, agent=None, verbose=0):
+  def __init__(self, cfg, manifold, geometry, density, rewarder, environment, agent, verbose=0):
     # Convert script specification to proper format.
     self.script = cfg.script if 'script' in cfg else {}
     for name, spec in self.script.items():

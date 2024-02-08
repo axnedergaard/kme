@@ -46,6 +46,8 @@ from . import quadruped
 from . import walker
 from . import humanoid
 
+from .dmc2gym import GymnasiumWrapper
+
 # Find all domains imported.
 _DOMAINS = {name: module for name, module in locals().items()
             if inspect.ismodule(module) and hasattr(module, 'SUITE')}

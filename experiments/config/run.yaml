@@ -11,9 +11,10 @@ hydra:
 defaults:
   - _self_
   - manifold: sphere 
-  - density: null 
-  - geometry: neural
-  - rewarder: kmeans 
+  - density: none 
+  - geometry: euclidean 
+  - rewarder: none 
+  - environment: none 
 
 script: {}
 
