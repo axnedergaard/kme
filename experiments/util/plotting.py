@@ -115,7 +115,21 @@ def kmeans_loss_vs_k(data, **kwargs):
     """
 
     def extract_and_format_data(data, **kwargs):
-        raise NotImplementedError()
+
+        groups = {}
+
+        for exp_data in data:
+            k = exp_data.config["density"]["k"]
+            kmeans_final_loss = exp_data["kmeans_loss"][-1]
+            if k not in groups:
+                groups[k] = []
+            groups[k].append(kmeans_final_loss)
+        
+        k = np.array(list(groups.keys()))
+        kmeans_loss = np.array(list(groups.values()))
+        label = "KMeans loss"
+
+        return (k, kmeans_loss, COLORS[0], label)
 
     fig, ax = plt.subplots()
     k, kmeans_loss, color, label = extract_and_format_data(data, **kwargs)
@@ -123,16 +137,16 @@ def kmeans_loss_vs_k(data, **kwargs):
 
     ax.set_xlabel("K")
     ax.set_ylabel("Kmeans objective")
-    ax.title("Kmeans Loss vs K")
+    ax.set_title("Kmeans Loss vs K")
 
-    if "grid" not in kwargs and not kwargs["grid"]:
+    if kwargs.get("grid", True):
         # by default the grid is shown
         ax.grid(visible=True)
 
-    if "legend" not in kwargs and not kwargs["legend"]:
+    if kwargs.get("legend", True):
         # by default the legend is shown
         ax.legend(loc="upper left")
-
+    
     return fig
 
 

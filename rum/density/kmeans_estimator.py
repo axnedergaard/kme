@@ -198,7 +198,7 @@ class OnlineKMeansEstimator(Density, Learner):
             raise ValueError("States must be Tensor of shape (B,)")
         km_objective = torch.sum(distances.pow(2)) # (1,)
         return km_objective # (1,)
-    
+
     def pdf(self, x: Tensor) -> float:
         return self.pdf_approx(x, self.diameters)
 
@@ -258,7 +258,7 @@ class OnlineKMeansEstimator(Density, Learner):
         """
         if not isinstance(state, Tensor) or state.dim() != 1:
             raise ValueError("State must be of shape (dim_states,)")
-        _, closest_idx = self._find_closest_cluster(state.unsqueeze(0)) # (1,)
+        _, closest_idx = self._find_closest_cluster(state.unsqueeze(0)) # ci(1,)
         self.centroids[closest_idx] = self._compute_centroid_pos(state, closest_idx)
         self.cluster_sizes[closest_idx] += 1
         return closest_idx # (1,)
@@ -272,10 +272,17 @@ class OnlineKMeansEstimator(Density, Learner):
         Time-complexity: O(Distance) + O(B * k)
         """
         if not isinstance(states, Tensor) or states.dim() != 2:
-            raise ValueError("States must be of shape (B, dim_states) or (dim_states,)")
-        matrix_distances = self._weighted_distance(states) # (B, k)
-        if matrix_distances.dim() == 1: matrix_distances = matrix_distances.unsqueeze(0) # (1, k)
-        distances, closest_idx = torch.min(matrix_distances, dim=1) # (B,)
+            raise ValueError("States must be of shape (B, dim_states)")
+        
+        batch_size = states.shape[0]
+        distances, closest_idx = torch.zeros((batch_size)), torch.zeros((batch_size), dtype=torch.long)
+
+        for i, s in enumerate(states):
+            ds = self._weighted_distance(s) # (k,)
+            d, ci = torch.min(ds, dim=0) # (1,)
+            distances[i] = d
+            closest_idx[i] = ci
+
         return distances, closest_idx # (B,)
 
 
@@ -286,11 +293,11 @@ class OnlineKMeansEstimator(Density, Learner):
         Returns: (1,) weighted distance
         Time-complexity: O(Distance) + O(k)
         """
-        if not isinstance(state, Tensor) or state.dim() != 2:
-            raise ValueError("State must be of shape (1, dim_states)")
-        
-        s, cs = state, self.centroids  # s(1, dim_states) cs(k, dim_states) 
-        distances: Tensor = self.geometry.distance_function(s, cs).view(-1) # distances(k,)
+        if not isinstance(state, Tensor) or state.dim() != 1:
+            raise ValueError("State must be of shape (dim_states,)")
+
+        s, cs = state.unsqueeze(0), self.centroids  # s(1, dim_states) cs(k, dim_states) 
+        distances: Tensor = self.distance_func(s, cs).view(-1) # distances(k,)
 
         if self.homeostasis:
             mean = torch.mean(self.cluster_sizes)
