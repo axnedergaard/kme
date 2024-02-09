@@ -130,7 +130,6 @@ def kmeans_loss_vs_k(data, **kwargs):
     def extract_and_format_data(data, **kwargs):
 
         groups = {} # Each group is a different value of K
-        import pdb; pdb.set_trace()
 
         for exp_data in data:
             # Grab the value of K for that experiment
