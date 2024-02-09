@@ -35,8 +35,8 @@ def kmeans_loss(density, manifold, n=1e4, **kwargs):
   return density.kmeans_objective(distances).item()
 
 def kmeans_count_variance(density, **kwargs):
-  cluster_sizes = density.cluster_sizes.item()
-  return np.var(cluster_sizes)
+  cluster_sizes = density.cluster_sizes
+  return torch.var(cluster_sizes).item()
 
 def pdf_loss(manifold, density, n_points=1000, **kwargs):
   samples = manifold.sample(n_points)

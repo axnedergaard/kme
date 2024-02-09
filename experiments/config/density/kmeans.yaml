@@ -1,2 +1,4 @@
 name: 'OnlineKMeansEstimator'
 k: 300
+dim_states: ${ambient_dim}
+balancing_strength: 0.1
