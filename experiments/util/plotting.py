@@ -5,6 +5,17 @@ import numpy as np
 COLORS = ['#1f77b4', '#ff7f0e', '#d62728',  '#2ca02c', '#9467bd']
 CONFIDENCE_COLORS = ['#aec7e8', '#ffbb78', '#ff9896', '#98df8a', '#c5b0d5']
 
+def _get_environment_name(config):
+  if config['environment'] == {}: # Manifold.
+    return config['manifold']['name']
+  else: # MuJoCo.
+    return config['environment']['domain_name'] 
+
+def _get_rewarder_name(config):
+  if config['rewarder'] == {}:
+    return 'None'
+  else:
+    return config['rewarder']['name']
 
 def dummy(data, **kwargs):
   entropy = data[0]['entropy']
@@ -45,7 +56,7 @@ def extrinsic_rewards_vs_steps_single_env(data, ax: Axes = None, **kwargs):
         groups = {}
 
         for exp_data in data:
-            group_key = exp_data.config["rewarder"]["name"]
+            group_key = _get_rewarder_name(exp_data.config)
             rewards = exp_data["extrinsic_reward"]
             if group_key not in groups:
                 groups[group_key] = {"rewards": []}
@@ -65,22 +76,16 @@ def extrinsic_rewards_vs_steps_single_env(data, ax: Axes = None, **kwargs):
         fig, ax = plt.subplots()
 
     config = data[0].config
-    env = config["manifold"]["name"]
+    env_name = _get_environment_name(config)
 
     for timesteps, rewards, color, label in extract_and_format_data(data, **kwargs):
         plot_with_confidence_interval(ax, timesteps, rewards, color, label)
 
     ax.set_xlabel("Timesteps")
     ax.set_ylabel("Extrinsic Reward")
-    ax.set_title(f"{env} (Run Sparse)")
+    ax.set_title(f"{env_name.capitalize()} (Run Sparse)")
 
-    # if "grid" not in kwargs and not kwargs["grid"]:
-    #     # by default the grid is shown
-    #     ax.set_grid(visible=True)
-
-    # if "legend" not in kwargs and not kwargs["legend"]:
-    #     # by default the legend is shown
-    #     ax.set_legend(loc="upper left")
+    ax.legend(loc="upper right")
 
     return fig
 
