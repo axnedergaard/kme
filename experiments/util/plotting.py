@@ -130,6 +130,7 @@ def kmeans_loss_vs_k(data, **kwargs):
     def extract_and_format_data(data, **kwargs):
 
         groups = {} # Each group is a different value of K
+        import pdb; pdb.set_trace()
 
         for exp_data in data:
             # Grab the value of K for that experiment
@@ -234,7 +235,26 @@ def scale_independent_loss_pdf_vs_steps(data, **kwargs):
     """
 
     def extract_and_format_data(data, **kwargs):
-        raise NotImplementedError()
+        
+        experiments = []
+
+        for exp_data in data:
+            # Grab the steps range for that experiment
+            steps = exp_data["_step"]
+            # Grab the scale independant loss pdf for that experiment
+            scale_independant_loss_pdf = exp_data["scale_independent_loss"]
+            experiments.append((steps, scale_independant_loss_pdf))
+
+        # Assert all the sublists have the same length
+        unique_lengths = {len(l) for exp in experiments for l in exp}
+        assert len(unique_lengths) == 1 and all(len(tup[0]) == len(tup[1]) for tup in experiments)
+
+        # Grab the data we need
+        steps = experiments[0][0]
+        scale_independant_loss_pdf = np.array([tup[1] for tup in experiments])
+        label = "Scale independent loss pdf"
+
+        return (steps, scale_independant_loss_pdf, COLORS[0], label)
 
     fig, ax = plt.subplots()
     steps, scale_independant_loss_pdf, color, label = extract_and_format_data(data, **kwargs)
@@ -262,7 +282,26 @@ def scale_independent_loss_distance_vs_steps(data, **kwargs):
     """
 
     def extract_and_format_data(data, **kwargs):
-        raise NotImplementedError()
+                
+        experiments = []
+
+        for exp_data in data:
+            # Grab the steps range for that experiment
+            steps = exp_data["_step"]
+            # Grab the scale independant distance_loss for that experiment
+            scale_independant_loss_pdf = exp_data["distance_loss"]
+            experiments.append((steps, scale_independant_loss_pdf))
+
+        # Assert all the sublists have the same length
+        unique_lengths = {len(l) for exp in experiments for l in exp}
+        assert len(unique_lengths) == 1 and all(len(tup[0]) == len(tup[1]) for tup in experiments)
+
+        # Grab the data we need
+        steps = experiments[0][0]
+        scale_independant_loss_pdf = np.array([tup[1] for tup in experiments])
+        label = "Scale independent distance loss"
+
+        return (steps, scale_independant_loss_pdf, COLORS[0], label)
 
     fig, ax = plt.subplots()
     steps, scale_independant_loss_distance, color, label = extract_and_format_data(data, **kwargs)
