@@ -33,8 +33,9 @@ class KNNRewarder(Rewarder):
         knn_params: KNNDensityEstimatorParams,
         rewarder_params: KNNRewarderParams,
         torch_env: TorchEnvParams,
+        concurrent: bool = True,
     ):
-        super().__init__()
+        super(KNNRewarder, self).__init__(concurrent)
         self.torch_env = torch_env
         self.rewarder_params = rewarder_params
         self.knn = KNNDensityEstimator(**knn_params.__dict__)

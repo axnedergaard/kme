@@ -9,8 +9,8 @@ class Rewarder:
     compute explicit rewards, and learn from states.
     """
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, concurrent : bool = True) -> None:
+        self.concurrent = concurrent
 
     def __call__(self, states: Tensor) -> FloatTensor:
         """

@@ -1,1 +1,2 @@
 name: 'KMERewarder'
+concurrent: true

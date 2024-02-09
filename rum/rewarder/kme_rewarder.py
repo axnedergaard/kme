@@ -22,9 +22,11 @@ class KMERewarder(Rewarder):
         eps: Optional[float] = 1e-9,
         # TORCH
         device: torch.device = torch.device('cpu'),
-        dtype: torch.dtype = torch.float32
+        dtype: torch.dtype = torch.float32,
+        # SB3
+        concurrent: bool = True,
     ) -> None:
-        super().__init__()
+        super(KMERewarder, self).__init__(concurrent)
 
         self.device = device
         self.dtype = dtype
