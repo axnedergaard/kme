@@ -141,7 +141,14 @@ def kmeans_loss_vs_k(data, **kwargs):
             # Append the final kmeans loss to the group
             # Those values will get averaged and plotted
             groups[k].append(kmeans_final_loss)
-        
+
+        # Sort the groups by K
+        groups = dict(sorted(groups.items()))
+
+        # Assert all the groups have the same length
+        assert len(set([len(v) for v in groups.values()])) == 1, "All groups must have the same length"
+
+        # Grab the data we need
         k = np.array(list(groups.keys()))
         kmeans_loss = np.array(list(groups.values())).T
         label = "KMeans loss"
@@ -188,6 +195,13 @@ def count_variance_vs_beta(data, **kwargs):
             # Those values will get averaged and plotted
             groups[beta].append(count_variance)
 
+        # Sort the groups by K
+        groups = dict(sorted(groups.items()))
+
+        # Assert all the groups have the same length
+        assert len(set([len(v) for v in groups.values()])) == 1, "All groups must have the same length"
+
+        # Grab the data we need
         beta = np.array(list(groups.keys()))
         count_variance = np.array(list(groups.values())).T
         label = "Count Variance"
