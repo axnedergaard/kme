@@ -40,8 +40,12 @@ def kmeans_count_variance(density, **kwargs):
 
 def pdf_loss(manifold, density, n_points=1000, **kwargs):
   samples = manifold.sample(n_points)
-  pdf_true = manifold.pdf(samples)
-  pdf_est = density.pdf(samples)
+  pdf_est = np.zeros(n_points) 
+  pdf_true = np.zeros(n_points)
+  for i, sample in enumerate(samples):
+    sample = torch.tensor(sample)
+    pdf_true[i] = manifold.pdf(samples)
+    pdf_est[i] = density.pdf(sample).item()
   return scale_independent_loss(pdf_true, pdf_est)
 
 def distance_loss(manifold, geometry, n_points=1000, **kwargs):
