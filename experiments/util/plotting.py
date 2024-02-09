@@ -17,6 +17,16 @@ def _get_rewarder_name(config):
   else:
     return config['rewarder']['name']
 
+def _add_grid_and_legend(ax, **kwargs):
+    # By default the grid is not shown.
+    if 'grid' in kwargs: 
+        ax.grid(visible=kwargs['grid'])
+    else:
+        ax.grid(visible=False)
+    # By default the legend is shown.
+    if 'legend' not in kwargs or kwargs['legend']:
+        ax.legend(loc="upper right")
+
 def dummy(data, **kwargs):
   entropy = data[0]['entropy']
   fig, ax = plt.subplots()
@@ -51,7 +61,7 @@ def extrinsic_rewards_vs_steps_single_env(data, ax: Axes = None, **kwargs):
     :params: data (undefined) : The data to plot
     """
 
-    def extract_and_format_data(data, **kwargs):
+    def extract_and_format_data(data):
         
         groups = {}
 
@@ -84,16 +94,7 @@ def extrinsic_rewards_vs_steps_single_env(data, ax: Axes = None, **kwargs):
     ax.set_xlabel("Timesteps")
     ax.set_ylabel("Extrinsic Reward")
     ax.set_title(f"{env_name.capitalize()} (Run Sparse)")
-
-    # By default the grid is not shown.
-    if 'grid' in kwargs: 
-        ax.grid(visible=kwargs['grid'])
-    else:
-        ax.grid(visible=False)
-
-    # By default the legend is shown.
-    if 'legend' not in kwargs or kwargs['legend']:
-        ax.legend(loc="upper right")
+    _add_grid_and_legend(ax, **kwargs)
     
     return fig
 
@@ -104,7 +105,8 @@ def extinsic_rewards_vs_steps_multiple_envs(data, **kwargs):
     :params: data (undefined) : The data to plot
     """
 
-    def extract_and_format_data(data, **kwargs):
+    def extract_and_format_data(data):
+        # TODO. Later on. :)
         raise NotImplementedError()
 
     fig, axs = plt.subplots(2, 3, figsize=(15, 10))
@@ -127,7 +129,7 @@ def kmeans_loss_vs_k(data, **kwargs):
     :params: data (undefined) : The data to plot
     """
 
-    def extract_and_format_data(data, **kwargs):
+    def extract_and_format_data(data):
 
         groups = {} # Each group is a different value of K
 
@@ -162,14 +164,7 @@ def kmeans_loss_vs_k(data, **kwargs):
     ax.set_xlabel("K")
     ax.set_ylabel("Kmeans objective")
     ax.set_title("Kmeans Loss vs K")
-
-    if kwargs.get("grid", True):
-        # by default the grid is shown
-        ax.grid(visible=True)
-
-    if kwargs.get("legend", True):
-        # by default the legend is shown
-        ax.legend(loc="upper left")
+    _add_grid_and_legend(ax, **kwargs)
     
     return fig
 
@@ -180,7 +175,7 @@ def count_variance_vs_beta(data, **kwargs):
     :params: data (undefined) : The data to plot
     """
 
-    def extract_and_format_data(data, **kwargs):
+    def extract_and_format_data(data):
         
         groups = {} # Each group is a different value of beta
 
@@ -215,14 +210,7 @@ def count_variance_vs_beta(data, **kwargs):
     ax.set_xlabel("Beta")
     ax.set_ylabel("Count Variance")
     ax.set_title("Count Variance vs Beta")
-
-    if kwargs.get("grid", True):
-        # by default the grid is shown
-        ax.grid(visible=True)
-
-    if kwargs.get("legend", True):
-        # by default the legend is shown
-        ax.legend(loc="upper left")
+    _add_grid_and_legend(ax, **kwargs)
     
     return fig
 
@@ -272,9 +260,8 @@ def pdf_loss_vs_steps(data, **kwargs):
     ax.set_xlabel("Timesteps")
     ax.set_ylabel("Probability Density Function Loss")
     ax.set_title(f"Probability Density Function Loss")
+    _add_grid_and_legend(ax, **kwargs)
 
-    # TODO. Add grid and legend stuff.
-    
     return fig
 
 
@@ -323,7 +310,6 @@ def distance_loss_vs_steps(data, **kwargs):
     ax.set_xlabel("Timesteps")
     ax.set_ylabel("Distance Loss")
     ax.set_title(f"Distance Loss")
-
-    # TODO. Add grid and legend stuff.
+    _add_grid_and_legend(ax, **kwargs)
     
     return fig
