@@ -7,6 +7,7 @@ from util.logger import Logger
 from util.make import make, make_environment
 from util.resolver import init_resolver
 import stable_baselines3 as sb3
+import numpy as np
 
 init_resolver()
 
@@ -18,22 +19,23 @@ def main(cfg):
 
   # Make learning objects.
   manifold = make(cfg, 'manifold')
+  if cfg.environment != {}:
+    environment = make_environment(cfg)
+  else:
+    environment = manifold # Default is using the manifold as the environment.
+  dim = int(np.prod(environment.observation_space.shape))
   if cfg.geometry != {}:
-    geometry = make(cfg, 'geometry')
+    geometry = make(cfg, 'geometry', dim=dim)
   else: # Default is using the natural geometry (i.e. geometry of the manifold).
     geometry = manifold
   if cfg.density != {}:
-    density = make(cfg, 'density', geometry=geometry)
+    density = make(cfg, 'density', geometry=geometry, dim=dim)
   else:
     density = None # Default is not doing density estimation.
   if cfg.rewarder != {}:
     rewarder = make(cfg, 'rewarder', density=density) 
   else:
     rewarder = None # Default is not using intrinsic rewards. 
-  if cfg.environment != {}:
-    environment = make_environment(cfg)
-  else:
-    environment = manifold # Default is using the manifold as the environment.
   if cfg.sampling_method == 'reinforcement_learning':
     # assert agent is None or cfg.n_envs % cfg.samples_per_iter == 0
     vec_env = sb3.common.vec_env.SubprocVecEnv([lambda: environment for _ in range(cfg.n_envs)])

@@ -47,7 +47,7 @@ class OnlineKMeansEstimator(Density, Learner):
     def __init__(
         self,
         k: int,
-        dim_states: int,
+        dim: int,
         # learning hyperparameters
         homeostasis: bool = True,
         force_sparse: bool = True,
@@ -64,8 +64,8 @@ class OnlineKMeansEstimator(Density, Learner):
         # learner buffer
         buffer_size: int = 1000,
     ):
-        Density.__init__(self, dim_states)
-        Learner.__init__(self, dim_states, buffer_size)
+        Density.__init__(self, dim)
+        Learner.__init__(self, dim, buffer_size)
 
         if not isinstance(k, int) or k <= 0:
             raise ValueError("Number of clusters k must be greater than 0")
@@ -75,11 +75,11 @@ class OnlineKMeansEstimator(Density, Learner):
             raise ValueError("Balancing strength must be non-negative")
         if init_method not in ['uniform', 'zeros', 'gaussian']:
             raise ValueError("Initialization method is not supported")
-        if origin is not None and (not isinstance(origin, Tensor) or origin.shape != (dim_states,)):
-            raise ValueError("Origin centroid must be Tensor of shape (dim_states,)")
+        if origin is not None and (not isinstance(origin, Tensor) or origin.shape != (dim,)):
+            raise ValueError("Origin centroid must be Tensor of shape (dim,)")
 
         self.k: int = k
-        self.dim_states: int = dim_states
+        self.dim: int = dim
         self.device: torch.device = device
         self.dtype: torch.dtype = dtype
 
@@ -93,7 +93,7 @@ class OnlineKMeansEstimator(Density, Learner):
         # Initialization
         self.init_method: str = init_method
         self.origin = origin if origin is not None else \
-            torch.zeros((1, self.dim_states), dtype=self.dtype, device=self.device)
+            torch.zeros((1, self.dim), dtype=self.dtype, device=self.device)
 
         # Hyperparameters
         self.lr: float = learning_rate
@@ -114,7 +114,7 @@ class OnlineKMeansEstimator(Density, Learner):
             raise ValueError("Interpolate function must take parameters (x, y, alpha)")
 
         # Internal k-Means state
-        self.centroids: Tensor = self._init_centroids() # (k, dim_states)
+        self.centroids: Tensor = self._init_centroids() # (k, dim)
         self.cluster_sizes: Tensor = torch.zeros((self.k,), device=self.device) # (k,)
 
         m = self._pairwise_distance() # (k,k)
@@ -132,11 +132,11 @@ class OnlineKMeansEstimator(Density, Learner):
         """
         WARNING: Updates internal state of current object.
         Updates the k-means state given a batch of states
-        Params: states: (B, dim_states) batch of states
-        Time-complexity: O(B * k * Pathological * dim_states)
+        Params: states: (B, dim) batch of states
+        Time-complexity: O(B * k * Pathological * dim)
         """
         if not isinstance(states, Tensor) or states.dim() != 2:
-            raise ValueError("States must be tensor of shape (B, dim_states)")
+            raise ValueError("States must be tensor of shape (B, dim)")
         
         B, k = states.shape[0], self.k # batch size, number clusters
         states = states.requires_grad_(False) # detach any gradients
@@ -146,7 +146,7 @@ class OnlineKMeansEstimator(Density, Learner):
 
         if shuffling:
             shuffle = torch.randperm(B)
-            states = states[shuffle] # (B, dim_states)
+            states = states[shuffle] # (B, dim)
         
         n_pathological = 0
 
@@ -170,12 +170,12 @@ class OnlineKMeansEstimator(Density, Learner):
     def simulate_step(self, state: Tensor) -> Tensor:
         """
         Simulates a step of the k-means algorithm on given state
-        Params: state: (dim_states,) state to simulate step on
+        Params: state: (dim,) state to simulate step on
         Returns: (K,) diameters of each clusters
-        Time-complexity: O(K * Pathological * dim_states)
+        Time-complexity: O(K * Pathological * dim)
         """
         if not isinstance(state, Tensor) or state.dim() != 1:
-            raise ValueError("State must be of shape (dim_states,)")
+            raise ValueError("State must be of shape (dim,)")
         _, closest_idx = self._find_closest_cluster(state.unsqueeze(0)) # (1,)
         # Simulate centroids update
         centroids = self.centroids.clone()
@@ -205,7 +205,7 @@ class OnlineKMeansEstimator(Density, Learner):
     def pdf_approx(self, x: Tensor, diameters: Optional[Tensor] = None) -> Tensor:
         """
         Computes the upper bound of the pdf of the k-means state
-        Params: x: (dim_states,) point at which to compute pdf
+        Params: x: (dim,) point at which to compute pdf
         Returns: (1,) upper bound of the pdf
         Time-complexity: O(k)
         """
@@ -297,7 +297,7 @@ class OnlineKMeansEstimator(Density, Learner):
             raise ValueError("State must be of shape (dim_states,)")
 
         s, cs = state.unsqueeze(0), self.centroids  # s(1, dim_states) cs(k, dim_states) 
-        distances: Tensor = self.distance_func(s, cs).view(-1) # distances(k,)
+        distances: Tensor = self.geometry.distance_function(s, cs).view(-1) # distances(k,)
 
         if self.homeostasis:
             mean = torch.mean(self.cluster_sizes)
