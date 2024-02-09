@@ -143,7 +143,7 @@ def kmeans_loss_vs_k(data, **kwargs):
             groups[k].append(kmeans_final_loss)
         
         k = np.array(list(groups.keys()))
-        kmeans_loss = np.array(list(groups.values()))
+        kmeans_loss = np.array(list(groups.values())).T
         label = "KMeans loss"
 
         return (k, kmeans_loss, COLORS[0], label)
@@ -189,7 +189,7 @@ def count_variance_vs_beta(data, **kwargs):
             groups[beta].append(count_variance)
 
         beta = np.array(list(groups.keys()))
-        count_variance = np.array(list(groups.values()))
+        count_variance = np.array(list(groups.values())).T
         label = "Count Variance"
 
         return (beta, count_variance, COLORS[0], label)
