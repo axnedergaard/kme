@@ -297,7 +297,7 @@ class OnlineKMeansEstimator(Density, Learner):
             raise ValueError("State must be of shape (dim_states,)")
 
         s, cs = state.unsqueeze(0), self.centroids  # s(1, dim_states) cs(k, dim_states) 
-        distances: Tensor = self.distance_func(s, cs).view(-1) # distances(k,)
+        distances: Tensor = self.geometry.distance_function(s, cs).view(-1) # distances(k,)
 
         if self.homeostasis:
             mean = torch.mean(self.cluster_sizes)

@@ -29,7 +29,6 @@ def entropy(density, **kwargs):
   return density.entropy().item()
 
 def kmeans_loss(density, manifold, n=1e4, **kwargs):
-  # TODO. THIS IS BROKEN
   samples = torch.Tensor(manifold.sample(int(n)))
   assert samples.dim() == 2, f"Expected 2D tensor, got {samples.dim()}"
   distances, _ = density._find_closest_cluster(samples)
