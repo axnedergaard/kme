@@ -85,8 +85,16 @@ def extrinsic_rewards_vs_steps_single_env(data, ax: Axes = None, **kwargs):
     ax.set_ylabel("Extrinsic Reward")
     ax.set_title(f"{env_name.capitalize()} (Run Sparse)")
 
-    ax.legend(loc="upper right")
+    # By default the grid is not shown.
+    if 'grid' in kwargs: 
+        ax.grid(visible=kwargs['grid'])
+    else:
+        ax.grid(visible=False)
 
+    # By default the legend is shown.
+    if 'legend' not in kwargs or kwargs['legend']:
+        ax.legend(loc="upper right")
+    
     return fig
 
 
@@ -121,13 +129,17 @@ def kmeans_loss_vs_k(data, **kwargs):
 
     def extract_and_format_data(data, **kwargs):
 
-        groups = {}
+        groups = {} # Each group is a different value of K
 
         for exp_data in data:
+            # Grab the value of K for that experiment
             k = exp_data.config["density"]["k"]
+            # Grab the final kmeans loss for that experiment
             kmeans_final_loss = exp_data["kmeans_loss"][-1]
             if k not in groups:
                 groups[k] = []
+            # Append the final kmeans loss to the group
+            # Those values will get averaged and plotted
             groups[k].append(kmeans_final_loss)
         
         k = np.array(list(groups.keys()))
@@ -162,7 +174,25 @@ def count_variance_vs_beta(data, **kwargs):
     """
 
     def extract_and_format_data(data, **kwargs):
-        raise NotImplementedError()
+        
+        groups = {} # Each group is a different value of beta
+
+        for exp_data in data:
+            # Grab the value of beta for that experiment
+            beta = exp_data.config["density"]["balancing_strength"]
+            # Grab the final count variance for that experiment
+            count_variance = exp_data["kmeans_count_variance"][-1]
+            if beta not in groups:
+                groups[beta] = []
+            # Append the final count variance to the group
+            # Those values will get averaged and plotted
+            groups[beta].append(count_variance)
+
+        beta = np.array(list(groups.keys()))
+        count_variance = np.array(list(groups.values()))
+        label = "Count Variance"
+
+        return (beta, count_variance, COLORS[0], label)
 
     fig, ax = plt.subplots()
     beta, count_variance, color, label = extract_and_format_data(data, **kwargs)
@@ -170,16 +200,16 @@ def count_variance_vs_beta(data, **kwargs):
 
     ax.set_xlabel("Beta")
     ax.set_ylabel("Count Variance")
-    ax.title("Count Variance vs Beta")
+    ax.set_title("Count Variance vs Beta")
 
-    if "grid" not in kwargs and not kwargs["grid"]:
+    if kwargs.get("grid", True):
         # by default the grid is shown
         ax.grid(visible=True)
 
-    if "legend" not in kwargs and not kwargs["legend"]:
+    if kwargs.get("legend", True):
         # by default the legend is shown
         ax.legend(loc="upper left")
-
+    
     return fig
 
 
@@ -198,16 +228,16 @@ def scale_independent_loss_pdf_vs_steps(data, **kwargs):
 
     ax.set_xlabel("Steps")
     ax.set_ylabel("Scale Independant Loss PDF")
-    ax.title("Scale Independant Loss PDF vs Steps")
+    ax.set_title("Scale Independant Loss PDF vs Steps")
 
-    if "grid" not in kwargs and not kwargs["grid"]:
+    if kwargs.get("grid", True):
         # by default the grid is shown
         ax.grid(visible=True)
 
-    if "legend" not in kwargs and not kwargs["legend"]:
+    if kwargs.get("legend", True):
         # by default the legend is shown
         ax.legend(loc="upper left")
-
+    
     return fig
 
 
@@ -226,14 +256,14 @@ def scale_independent_loss_distance_vs_steps(data, **kwargs):
 
     ax.set_xlabel("Steps")
     ax.set_ylabel("Scale Independant Loss Distance")
-    ax.title("Scale Independant Loss Distance vs Steps")
+    ax.set_title("Scale Independant Loss Distance vs Steps")
 
-    if "grid" not in kwargs and not kwargs["grid"]:
+    if kwargs.get("grid", True):
         # by default the grid is shown
         ax.grid(visible=True)
 
-    if "legend" not in kwargs and not kwargs["legend"]:
+    if kwargs.get("legend", True):
         # by default the legend is shown
         ax.legend(loc="upper left")
-
+    
     return fig
