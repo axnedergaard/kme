@@ -19,21 +19,19 @@ class EuclideanManifold(Manifold):
     return np.zeros(self.dim)
 
   def pdf(self, p):
-    if self.sampler['type'] == 'uniform':
-      if np.all(p >= self.sampler['low']) and np.all(p <= self.sampler['high']):
-        return 1 / np.prod(self.sampler['high'] - self.sampler['low'])
+    if self.sampler['name'] == 'uniform':
+      if np.linalg.norm(p) <= 1.0:
+        return 1.0 / np.prod(self.sampler['high'] - self.sampler['low'])
       else:
         return 0.0
-    elif self.sampler['type'] == 'gaussian':
-      return np.exp(-np.sum((p - self.sampler['mean'])**2) / (2 * self.sampler['std']**2)) / (np.sqrt((2 * np.pi)**self.dim) * self.sampler['std'])
+    elif self.sampler['name'] == 'gaussian': # Isotropic Gaussian.
+      return np.exp(-np.sum((p - self.sampler['mean']) ** 2) / (2 * self.sampler['std'] ** 2)) / ((2 * np.pi) ** (self.dim / 2.0) * self.sampler['std'])
 
   def sample(self, n):
-    if n > 1: # TODO.
-      return np.array([self.sample(1) for _ in range(n)])
-    if self.sampler['type'] == 'uniform':
-      return np.random.uniform(self.sampler['low'], self.sampler['high'], self.dim)
-    elif self.sampler['type'] == 'gaussian':
-      return np.random.normal(self.sampler['mean'], self.sampler['std'], self.dim)
+    if self.sampler['name'] == 'uniform':
+      return np.random.uniform(self.sampler['low'], self.sampler['high'], (n, self.dim))
+    elif self.sampler['name'] == 'gaussian':
+      return np.random.normal(self.sampler['mean'], self.sampler['std'], (n, self.dim))
 
   def grid(self, n):
     # TODO: Could be more efficient.
