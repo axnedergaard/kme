@@ -10,7 +10,6 @@ class SphereAtlas(Atlas):
       p[0] / (1 + p[2]),
       p[1] / (1 + p[2])
     ])
-
   @staticmethod
   def map_1(p):
     return np.array([
@@ -124,25 +123,22 @@ class SphereManifold(Manifold):
     self.atlas = SphereAtlas()
 
   def starting_state(self):
-    #return np.array([0.0, 0.0, 1.0])
-    return sphere_sample_uniform(self.dim)
+    return sphere_sample_uniform(self.dim)[0]
 
   def pdf(self, p):
-    if self.sampler['type'] == 'uniform':
+    if self.sampler['name'] == 'uniform':
       if np.linalg.norm(p) == 1: 
-        return 1 / (2 * np.pi)**(self.dim / 2) 
+        return 1.0 / (2.0 * np.pi) ** (self.dim / 2.0) 
       else:
         return 0.0
-    elif self.sampler['type'] == 'vonmises_fisher':
+    elif self.sampler['name'] == 'vonmises_fisher':
       return scipy.stats.vonmises_fisher.pdf(p, self.sampler['mu'], self.sampler['kappa'])
 
   def sample(self, n):
-    if n > 1: # TODO.
-      return np.array([self.sample(1) for _ in range(n)])
-    if self.sampler['type'] == 'uniform':
-      return sphere_sample_uniform(self.dim)
-    elif self.sampler['type'] == 'vonmises_fisher':
-      return scipy.stats.vonmises_fisher.rvs(self.sampler['mu'], self.sampler['kappa'], size=1)[0]
+    if self.sampler['name'] == 'uniform':
+      return sphere_sample_uniform(self.dim, n)
+    elif self.sampler['name'] == 'vonmises_fisher':
+      return scipy.stats.vonmises_fisher.rvs(self.sampler['mu'], self.sampler['kappa'], size=n)
 
   def grid(self, n):
     m = int(np.power(n, 1.0 / 3.0))
@@ -156,7 +152,7 @@ class SphereManifold(Manifold):
     return points
 
   def implicit_function(self, p):
-    return 1.0 - p[0]**2 - p[1]**2
+    return 1.0 - p[0] ** 2 - p[1] ** 2
 
   @staticmethod
   def distance_function(p, q):

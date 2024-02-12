@@ -34,7 +34,7 @@ class GeodesicManifold():
     max_angle = np.pi / 4
     self.action_space = gymnasium.spaces.Box(low=np.array([-1.0] + [-max_angle] * (self.dim - 1)), high=np.array([1.0] + [max_angle] * (self.dim - 1))) #, shape=[self.dim])
     #self.velocity = np.array([1.0] + [0.0] * (self.dim - 1))
-    self.velocity = sphere_sample_uniform(self.dim - 1)
+    self.velocity = sphere_sample_uniform(self.dim - 1)[0]
 
   def parallel_transport(self, previous_state, state, vector):
     # If the chart is unchanged, parallel transport in the coordinate bases is represented by the identity matrix. For changed charts, we must perform the change of basis at a given point.
@@ -112,7 +112,7 @@ class Manifold(gymnasium.Env, Density, Geometry):
       prob_state = self.pdf(state)
       accepted = False
       while not accepted:
-        change_state = sphere_sample_uniform(self.dim - 1) 
+        change_state = sphere_sample_uniform(self.dim - 1)[0]
         updated_state = self.manifold_step(state, change_state, step_size if step_size is not None else self.max_step_size)
         prob_updated_state = self.pdf(updated_state)
         if np.random.uniform() < prob_updated_state / prob_state:
