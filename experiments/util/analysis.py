@@ -51,7 +51,7 @@ def pdf_loss(manifold, density, n_points=1000, **kwargs):
 def distance_loss(manifold, geometry, n_points=1000, **kwargs):
   x, y = manifold.sample(n_points), manifold.sample(n_points)
   xt, yt = torch.tensor(x), torch.tensor(y)
-  distances_true = geometry.distance_function(xt, yt)
+  distances_true = geometry.distance_function(xt, yt).detach()
   distances_est = manifold.distance_function(x, y)
   return scale_independent_loss(distances_true, distances_est)
 

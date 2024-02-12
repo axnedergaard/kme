@@ -87,10 +87,10 @@ class NeuralGeometry(Geometry, Learner):
     def __call__(self, x: Tensor, y: Tensor) -> FloatTensor:
         self.network.eval()
         with torch.no_grad():
-            return self.distance(x, y)
+            return self.distance_function(x, y)
 
 
-    def distance(self, x: Tensor, y: Tensor) -> FloatTensor:
+    def distance_function(self, x: Tensor, y: Tensor) -> FloatTensor:
         x, y = self._port_to_tensor(x), self._port_to_tensor(y)
         
         assert x.dim() in [1, 2] and y.dim() in [1, 2] # (dim,) or (B, dim)
@@ -121,11 +121,11 @@ class NeuralGeometry(Geometry, Learner):
             self.optimizer.zero_grad()
 
             positive_batch = positive_batch.to(self.device)
-            pos_difference = self.distance(positive_batch[:, 0, :], positive_batch[:, 1, :])
+            pos_difference = self.distance_function(positive_batch[:, 0, :], positive_batch[:, 1, :])
             positive_loss = torch.sum(pos_difference)
 
             negative_batch = negative_batch.to(self.device)
-            neg_difference = self.distance(negative_batch[:, 0, :], negative_batch[:, 1, :])
+            neg_difference = self.distance_function(negative_batch[:, 0, :], negative_batch[:, 1, :])
             negative_loss = - self.negative_sample_scaling * torch.sum(torch.relu(neg_difference - self.negative_margin))
 
             loss = positive_loss + negative_loss
@@ -159,7 +159,7 @@ if __name__ == '__main__':
     x = torch.tensor([1, 2, 3], dtype=torch.float)
     y = torch.tensor([4, 5, 6], dtype=torch.float)
 
-    # test computing a distance
+    # test computing a distance_function
     print('neural dist', d(x, y))
     print('euclidean dist', d.euclidean(x.unsqueeze(0), y.unsqueeze(0)))
     d.learn()
