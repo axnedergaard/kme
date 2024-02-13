@@ -1,8 +1,8 @@
-from .density import Density
-from ..learner import Learner
-from ..geometry import Geometry, EuclideanGeometry
+from rum.density.density import Density
+from rum.learner.learner import Learner
+from rum.geometry import Geometry, EuclideanGeometry
 from torch import Tensor, LongTensor, FloatTensor
-from typing import Callable, Union, Optional, Tuple, Literal
+from typing import Union, Optional, Tuple
 from inspect import signature, Parameter
 import numpy as np
 import torch
@@ -211,12 +211,21 @@ class OnlineKMeansEstimator(Density, Learner):
         """
         _, closest_idx = self._find_closest_cluster(x.unsqueeze(0))
         ds = self.diameters if diameters is None else diameters
-        return self.entropic_func(1 / (ds[closest_idx[0]] + 1e-6))
-
+        return 1 / (ds[closest_idx[0]] + 1e-6)
+    
+    def information(self, x: Tensor, diameters: Optional[Tensor] = None) -> Tensor:
+        """
+        Computes the information of a state in the k-means
+        Params: x: (dim,) point at which to compute information
+        Params: diameters: (k,) diameters of each clusters
+        Returns: (1,) lower bound of the information
+        Time-complexity: O(k)
+        """
+        pdf_approx = self.pdf_approx(x, diameters)
+        return self.entropic_func(pdf_approx)
 
     def entropy(self) -> Tensor:
         return self.entropy_lb(self.diameters)
-
 
     def entropy_lb(self, diameters: Optional[Tensor] = None) -> Tensor:
         """
@@ -230,7 +239,6 @@ class OnlineKMeansEstimator(Density, Learner):
         # ds = self.diameters if diameters is None else diameters
         entropies = self.entropic_func(diameters) # (k,)
         return torch.sum(entropies) # (1,)
-    
 
     # --- kMeans state update private methods ---
 

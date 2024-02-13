@@ -1,12 +1,8 @@
-from .rewarder import Rewarder
-from ..density import OnlineKMeansEstimator
-from typing import Callable, Union, Optional, Tuple, Literal
-from torch import Tensor, FloatTensor, LongTensor
-import concurrent.futures
-from enum import Enum
-import numpy as np
+from rum.rewarder.rewarder import Rewarder
+from rum.density import OnlineKMeansEstimator
+from torch import Tensor, FloatTensor
+from typing import Literal
 import torch
-import os
 
 
 class KMERewarder(Rewarder):
@@ -15,91 +11,65 @@ class KMERewarder(Rewarder):
         self,
         # KM DENSITY ESTIMATOR
         density: OnlineKMeansEstimator,
-        # KME REWARDER HYPERPARAMS
-        entropic_func: str = 'exponential',
-        power_fn_exponent: float = 0.5,
+        # KME REWARDER HYPERPARAMS
         differential: bool = True,
-        eps: Optional[float] = 1e-9,
-        # TORCH
-        device: torch.device = torch.device('cpu'),
+        # TORCH
+        device: torch.device = torch.device("cpu"),
         dtype: torch.dtype = torch.float32,
         # SB3
         concurrent: bool = True,
     ) -> None:
         super(KMERewarder, self).__init__(concurrent)
 
+        # torch env settings
         self.device = device
         self.dtype = dtype
 
-        if device == torch.device('cuda'):
-            self.num_cuda_cores_per_device = 1024  # varies by GPU
-            self.num_threads = torch.cuda.device_count() * self.num_cuda_cores_per_device
-        else:
-            # Use the number of CPU cores if on CPU
-            self.num_threads = os.cpu_count()
-
+        # Underlying kmeans density estimator
+        self.kmeans = density
         self.differential: bool = differential
-        self.entropy_buff = 0.0 # store previous entropy
-        self.pdf_approx_buff = 0.0 # store previous pdf approx
-
-        # Underlying kmeans density estimator
-        self.kmeans = density 
-
 
     def reward_function(self, states: Tensor) -> FloatTensor:
         if states.dim() == 2:
-          return self._reward_function(states)
+            return self._reward_function(states)
         else:
-          num_steps, num_envs, num_dims = states.shape
-          states = states.view(num_steps * num_envs, num_dims)
-          rewards = self._reward_function(states)
-          return rewards.view(num_steps, num_envs)
+            num_steps, num_envs, num_dims = states.shape
+            states = states.view(num_steps * num_envs, num_dims)
+            rewards = self._reward_function(states)
+            return rewards.view(num_steps, num_envs)
 
-
-    def _reward_function(self, states: Tensor, form: Literal['entropy', 'information'] = 'entropy') -> FloatTensor:
-        if not isinstance(states, Tensor): #or states.dim() != 2:
+    def _reward_function(
+        self, states: Tensor, form: Literal["entropy", "information"] = "entropy"
+    ) -> FloatTensor:
+        if not isinstance(states, Tensor):
             raise ValueError("States must be of shape (B, dim_states)")
 
         def reward_entropy(state: Tensor) -> FloatTensor:
-            #km, assign_idx, diameters = self.kmeans.simulate_step(state)
             diameters = self.kmeans.simulate_step(state)
             entropy_lb = self.kmeans.entropy_lb(diameters)
-            reward = entropy_lb - self.entropy_buff if self.differential else entropy_lb
-            if self.differential: self.entropy_buff = reward
-            return reward
-        
+            if self.differential:
+                entropy_lb_before = self.kmeans.entropy_lb(self.kmeans.diameters)
+                return entropy_lb - entropy_lb_before
+            return entropy_lb
+
         def reward_information(state: Tensor) -> FloatTensor:
             diameters = self.kmeans.diameters
-            pdf_approx = self.kmeans.pdf_approx(state, diameters)
-            reward = pdf_approx - self.pdf_approx_buff if self.differential else pdf_approx
-            if self.differential: self.pdf_approx_buff = reward
-            return reward
+            information = self.kmeans.information(state, diameters)
+            return information
 
-        rewards = torch.zeros(states.size(0)) # shape: (B,)
-        #num_threads = min(states.size(0), self.num_threads)
-        #with concurrent.futures.ProcessPoolExecutor(max_workers=num_threads) as executor:
-        #    for i, rew in enumerate(executor.map(lambda s: f(s), states)):
-       #         rewards[i] = rew
-        
+        rewards = torch.zeros(states.size(0))  # shape: (B,)
+
         for i, state in enumerate(states):
-            if form == 'entropy':
+            if form == "entropy":
                 rewards[i] = reward_entropy(state)
-            elif form == 'information':
+            elif form == "information":
                 rewards[i] = reward_information(state)
             else:
                 raise ValueError("form must be either 'entropy' or 'information'")
-        
-        return rewards # shape: (B,)
 
+        return rewards  # shape: (B,)
 
     def learn(self, states: Tensor) -> FloatTensor:
-        self._learn(states)
-
-
-    def _learn(self, states: Tensor) -> None:
         if not isinstance(states, Tensor) or states.dim() != 2:
             raise ValueError("States must be of shape (B, dim_states)")
         self.kmeans.learn(states)
-        # shuffle_idx = torch.randperm(states.size(0))
-        # shuffled_states = states[shuffle_idx]
-
