@@ -1,11 +1,9 @@
 from rum.rewarder.rewarder import Rewarder
 from rum.density import KNNDensityEstimator
 from dataclasses import dataclass
-
-from stable_baselines3.common.buffers import RolloutBuffer
-from torch import FloatTensor
+from torch import Tensor, FloatTensor
+from typing import Literal
 import torch
-import os
 
 
 @dataclass
@@ -39,37 +37,45 @@ class KNNRewarder(Rewarder):
         self.torch_env = torch_env
         self.rewarder_params = rewarder_params
         self.knn = KNNDensityEstimator(**knn_params.__dict__)
-        self.entropy_buff = 0.0  # store previous entropy
 
-        if torch_env.device == torch.device("cuda"):
-            self.num_cuda_cores_per_device = 1024  # varies by GPU
-            self.num_threads = (
-                torch.cuda.device_count() * self.num_cuda_cores_per_device
-            )
+    def reward_function(self, states: Tensor) -> FloatTensor:
+        if states.dim() == 2:
+            return self._reward_function(states)
         else:
-            # Use the number of CPU cores if on CPU
-            self.num_threads = os.cpu_count()
+            num_steps, num_envs, num_dims = states.shape
+            states = states.view(num_steps * num_envs, num_dims)
+            rewards = self._reward_function(states)
+            return rewards.view(num_steps, num_envs)
+        
+    def _reward_function(self, states: Tensor, form: Literal['entropy', 'information'] = 'entropy') -> FloatTensor:
+        if not isinstance(states, Tensor):
+            raise ValueError("States must be of shape (B, dim_states)")
+        
+        def reward_entropy(state: Tensor) -> FloatTensor:
+            distances = self.knn.simulate_step(state)
+            entropy_approx = self.knn.entropy_approx(distances)
+            if self.rewarder_params.differential:
+                entropy_approx_before = self.knn.entropy_approx()
+                return entropy_approx - entropy_approx_before
+            return entropy_approx            
+        
+        def reward_information(state: Tensor) -> FloatTensor:
+            information = self.knn.information(state)
+            return information
 
-    def reward(self, buffer: RolloutBuffer) -> FloatTensor:
-        if not isinstance(buffer, RolloutBuffer):
-            raise TypeError("Buffer must be an instance of RolloutBuffer")
-        n_steps, n_envs = buffer.buffer_size, buffer.num_envs
-        states = buffer.observations.view(n_steps * n_envs, self.knn.dim_states)
-        return self._reward(states).view(n_steps, n_envs)
+        rewards = torch.zeros(states.size(0)) # shape: (B,)
 
-    def _reward(self, states: torch.Tensor) -> torch.Tensor:
-        if not isinstance(states, torch.Tensor) or states.dim() != 2:
-            raise ValueError("States must be of shape (batch_size, state_dim)")
-        entropy = self.knn.entropy(states)
-        return self._compute_reward(entropy)
-
-    def learn(self, states: torch.Tensor) -> None:
-        self.knn.update_replay_buffer(states)
-        return None
-
-    def _compute_reward(self, entropy: torch.Tensor) -> torch.Tensor:
-        r = entropy
-        reward = r - self.entropy_buff if self.rewarder_params.differential else r
-        if self.rewarder_params.differential:
-            self.entropy_buff = r
-        return reward
+        for i, state in enumerate(states):
+            if form == 'entropy':
+                rewards[i] = reward_entropy(state)
+            elif form == 'information':
+                rewards[i] = reward_information(state)
+            else:
+                raise ValueError("form must be either 'entropy' or 'information'")
+        
+        return rewards # shape: (B,)        
+    
+    def learn(self, states: Tensor) -> FloatTensor:
+        if not isinstance(states, Tensor) or states.dim() != 2:
+            raise ValueError("States must be of shape (B, dim_states)")
+        self.knn.learn(states)

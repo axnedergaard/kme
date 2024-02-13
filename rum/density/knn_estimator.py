@@ -2,28 +2,92 @@ import faiss
 import torch
 
 from rum.density import Density
-from rum.learner import Learner
+from rum.density.kmeans_estimator import EntropicFunction
+
+from torch import Tensor
+from typing import Optional
 
 
-class KNNDensityEstimator(Density, Learner):
-    def __init__(self, state_dim, k, constant_c=1e-3):
-        self.state_dim = state_dim
-        self.k = k
-        self.constant_c = constant_c
-        self.index = None  # To be created with the replay buffer
+class KNNDensityEstimator(Density):
 
-    def update_replay_buffer(self, replay_buffer_states: torch.Tensor):
-        replay_buffer_states_np = replay_buffer_states.cpu().numpy()
-        self.index = faiss.IndexFlatL2(self.state_dim)
-        self.index = faiss.index_cpu_to_all_gpus(self.index)
-        self.index.add(replay_buffer_states_np)
+    def __init__(self, k, dim, buffer_size, entropic_func: EntropicFunction = None):
+        self.k: int = k
+        self.dim = dim
+        self.buffer = torch.zeros((buffer_size, dim))
+        self.buffer_size = 0
+        self.entropic_func = entropic_func if entropic_func is not None \
+            else EntropicFunction("log", eps=1)
 
-    def entropy(self, states: torch.Tensor) -> torch.Tensor:
-        # search k-nearest neighbors in the replay buffer
-        distances, _ = self.index.search(states.cpu().numpy(), self.k + 1)
-        distances = distances[:, 1:]  # exclude distance to himself
-        entropy = torch.log(
-            self.constant_c
-            + torch.mean(torch.from_numpy(distances).to(states.device), dim=1)
-        )
-        return entropy
+    # --- Public interface methods ---
+        
+    def learn(self, states: Tensor) -> None:
+        # Update the buffer state with incoming states.
+        self.compute_buffer(states, inplace=True)
+
+    def simulate_step(self, state: Tensor) -> Tensor:
+        b, bsize = self.compute_buffer(state, inplace=False)
+        return self.compute_distances(b[:bsize], b, bsize) # shape: (bsize, bsize)
+
+    # --- knn density estimators methods ---
+
+    def pdf(self, x: Tensor) -> float:
+        self.pdf_approx(x)
+    
+    def pdf_approx(self, x: Tensor) -> float:
+        x = x.view(-1, self.dim) # shape: (1, dim)
+        b, bsize = self.compute_buffer(x, inplace=False)
+        distances = self.compute_distances(x, b, bsize).view(-1) # shape: (bsize,)
+        return (1.0 / self.k) * torch.sum(distances)
+    
+    def information(self, x: Tensor) -> float:
+        pdx_approx = self.pdf_approx(x)
+        return self.entropic_func(pdx_approx)
+
+    def entropy(self) -> Tensor:
+        self.entropy_approx()
+
+    def entropy_approx(self, distances: Optional[Tensor] = None) -> Tensor:
+        assert distances is None or distances.shape == (self.buffer_size, self.buffer_size)
+        distances = distances or self.compute_distances(self.buffer[:self.buffer_size], self.buffer, self.buffer_size)
+        pdf_approxs = (1.0 / self.k) * torch.sum(distances, dim=1)
+        return torch.sum(self.entropic_func(pdf_approxs))
+    
+    # --- knn private computation methods ---
+
+    def compute_buffer(self, states: Tensor, inplace=True) -> Tensor:
+        if states.size(0) > self.buffer.size(0):
+            raise ValueError("States size must be less than buffer size.")
+        
+        if inplace:
+            # Use the buffer from current state.
+            b = self.buffer
+        else:
+            # Create a fresh copy of the buffer.
+            b = torch.zeros(self.buffer.shape)
+            b = self.buffer[0:self.buffer_size]
+
+        # Compute the number of slots available in the buffer.
+        num_new_states = states.size(0)
+        num_free_slots = self.buffer.size(0) - self.buffer_size
+        size_overflow = num_new_states - num_free_slots
+
+        if size_overflow > 0:
+            # First pad the buffer with free slots.
+            b[self.buffer_size:self.buffer_size+num_free_slots] = states[:num_free_slots]
+            # Then flush some states to make room for the new ones.
+            # Note: We might drop some incoming states in early stages. (This is okay)
+            drop_idx = torch.randint(low=0, high=self.buffer.size(0), size=(size_overflow,))
+            b[drop_idx] = states[num_free_slots:]
+            return b, self.buffer_size
+        
+        # If there is enough space in the buffer, just append.
+        b[self.buffer_size:self.buffer_size+num_new_states] = states
+        return b, self.buffer_size + num_new_states
+    
+    def compute_distances(self, states: Tensor, buffer: Tensor, bsize: int) -> Tensor:
+        # Create a faiss index (L2 distance)
+        index = faiss.IndexFlatL2(self.dim)
+        index.add(buffer[:bsize].numpy())
+        # Search for the k nearest neighbors.
+        distances, _ = index.search(states.numpy(), self.k) # shape: (states.size(0), k)
+        return torch.tensor(distances)
