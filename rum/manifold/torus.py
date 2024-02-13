@@ -2,9 +2,11 @@ import numpy as np
 from .manifold import Manifold, GlobalChartAtlas
 
 class TorusManifold(Manifold):
-  def __init__(self, dim):
+  def __init__(self, dim, sampler):
     assert dim == 2 # TODO.
     super(TorusManifold, self).__init__(dim, dim + 1)
+
+    self.sampler = sampler
 
     self.R = 2.0 / 3.0 # Radius of "inside" circle around 1-d hole. 
     self.r = 1.0 / 3.0 # Radius of "outside" circle around 2-d hole.
@@ -26,20 +28,31 @@ class TorusManifold(Manifold):
     return self.inverse_map(xi)
 
   def starting_state(self):
-    local = np.zeros(self.dim) 
+    #local = np.zeros(self.dim) 
+    local = [np.random.uniform(-np.pi, np.pi), 0]
     return self.inverse_map(local)
 
   def pdf(self, p):
     # Uniform.
-    if True: # TODO. Check if on surface.
-      return 1 / ((2 * np.pi * self.r)**2 * self.R) # TODO. This is only valid for dim=2.
+    if self.sampler['name'] == 'uniform':
+      # TODO. Below ignores constraints on p_0, p_1 and might need an almost_equal function.
+      if p[2] == implicit_function(p): # Check if on surface. 
+        xi = self.map(p) # Points on "inside" of circle around 1-d hole are less likely.
+        return (self.R + self.r * (1.0 + np.cos(xi[1]))) / (2.0 * np.pi * (self.R + self.r))
+      else:
+        return 0.0
+    elif self.sampler['name'] == 'bivariate_von_mises':
+      raise NotImplementedError
+    else:
+      raise ValueError(f'Unknown sampler: {self.sampler["name"]}')
 
   def sample(self, n):
-    if n > 1:
-      return np.array([self.sample(1) for _ in range(n)])
-    # TODO. This is wrong.
-    local = np.random.uniform(-np.pi, np.pi, 2)
-    return self.inverse_map(local)
+    if self.sampler['name'] == 'uniform':
+      raise NotImplementedError
+    elif self.sampler['name'] == 'bivariate_von_mises':
+      raise NotImplementedError
+    else:
+      raise ValueError(f'Unknown sampler: {self.sampler["name"]}')
 
   def grid(self, n):
     assert self.dim == 2

@@ -1,2 +1,3 @@
 name: 'TorusManifold'
 dim: ${eval:'${ambient_dim} - 1'} 
+sampler: 'uniform'

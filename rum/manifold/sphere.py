@@ -133,12 +133,16 @@ class SphereManifold(Manifold):
         return 0.0
     elif self.sampler['name'] == 'vonmises_fisher':
       return scipy.stats.vonmises_fisher.pdf(p, self.sampler['mu'], self.sampler['kappa'])
+    else:
+      raise ValueError(f'Unknown sampler: {self.sampler["name"]}')
 
   def sample(self, n):
     if self.sampler['name'] == 'uniform':
       return sphere_sample_uniform(self.dim, n)
     elif self.sampler['name'] == 'vonmises_fisher':
       return scipy.stats.vonmises_fisher.rvs(self.sampler['mu'], self.sampler['kappa'], size=n)
+    else:
+      raise ValueError(f'Unknown sampler: {self.sampler["name"]}')
 
   def grid(self, n):
     m = int(np.power(n, 1.0 / 3.0))
