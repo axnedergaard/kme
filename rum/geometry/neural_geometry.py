@@ -153,6 +153,9 @@ class NeuralGeometry(Geometry, Learner):
             raise ValueError("Unsupported input type. Expected numpy.ndarray \
                     or torch.Tensor, got: {}".format(type(input)))
 
+    def interpolate(self, p, q, alpha):
+      return EuclideanGeometry.interpolate(self, p, q, alpha)
+
 
 if __name__ == '__main__':
     d = NeuralGeometry(3, [4, 8, 16], 32)

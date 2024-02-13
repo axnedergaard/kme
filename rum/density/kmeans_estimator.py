@@ -1,6 +1,7 @@
 from rum.density.density import Density
 from rum.learner.learner import Learner
 from rum.geometry import Geometry, EuclideanGeometry
+from rum.manifold import Manifold # Needed for initialization under natural geometry.
 from torch import Tensor, LongTensor, FloatTensor
 from typing import Union, Optional, Tuple
 from inspect import signature, Parameter
@@ -105,13 +106,6 @@ class OnlineKMeansEstimator(Density, Learner):
 
         # Underlying manifold geometry functions
         self.geometry = geometry
-        params = signature(self.geometry.distance_function).parameters
-        if [x[0] for x in list(params.items())] != ['x', 'y']:
-            raise ValueError("Distance function must take parameters (x, y)")
-        
-        params = signature(self.geometry.interpolate).parameters
-        if [x[0] for x in list(params.items())] != ['x', 'y', 'alpha']:
-            raise ValueError("Interpolate function must take parameters (x, y, alpha)")
 
         # Internal k-Means state
         self.centroids: Tensor = self._init_centroids() # (k, dim)
@@ -251,8 +245,13 @@ class OnlineKMeansEstimator(Density, Learner):
         if self.init_method == 'zeros':
             return self.origin.repeat(self.k, 1)
         elif self.init_method == 'uniform':
+          if isinstance(self.geometry, Manifold): # This is very hacky.
+            assert self.geometry.sampler['name'] == 'uniform'
+            return torch.Tensor(self.geometry.sample(self.k))
+          else:
             return 2 * torch.rand((self.k, self.dim), dtype=self.dtype, device=self.device) - 1
         elif self.init_method == 'gaussian':
+            assert not isinstance(self.geometry, Manifold)
             cov = torch.eye(self.dim, dtype=self.dtype, device=self.device)
             return torch.distributions.MultivariateNormal(self.origin, cov).sample((self.k,)).clamp(-1, 1)
 

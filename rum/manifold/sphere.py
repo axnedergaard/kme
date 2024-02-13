@@ -1,5 +1,7 @@
 import numpy as np
 import itertools
+from scipy.spatial import geometric_slerp
+import torch
 from .manifold import Manifold, Atlas, Chart
 from .util import sphere_sample_uniform
 
@@ -158,7 +160,10 @@ class SphereManifold(Manifold):
   def implicit_function(self, p):
     return 1.0 - p[0] ** 2 - p[1] ** 2
 
-  @staticmethod
-  def distance_function(p, q):
-    return np.arccos(np.dot(p, q))
+  def distance_function(self, p, q):
+    return torch.acos(torch.inner(p, q).squeeze(0))
 
+  def interpolate(self, p, q, alpha):
+    # Computer graphics people already solved this to interpolate rotatations.
+    # https://en.wikipedia.org/wiki/Slerp#Geometric_Slerp
+    return torch.tensor(geometric_slerp(p, q, alpha, tol=1e-4), dtype=torch.float32)

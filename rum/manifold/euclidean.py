@@ -1,6 +1,8 @@
 import numpy as np
 import itertools
 from .manifold import Manifold, GlobalChartAtlas
+from rum.geometry import EuclideanGeometry 
+
 
 class EuclideanManifold(Manifold):
   def __init__(self, dim, sampler):
@@ -54,6 +56,8 @@ class EuclideanManifold(Manifold):
     else:
       return 0.0
 
-  @staticmethod
-  def distance_function(p, q):
-    return np.linalg.norm(p - q)
+  def distance_function(self, p, q):
+    return EuclideanGeometry.distance_function(self, p, q)
+
+  def interpolate(self, p, q, alpha):
+    return EuclideanGeometry.interpolate(self, p, q, alpha)

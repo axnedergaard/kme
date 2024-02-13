@@ -118,8 +118,11 @@ def main(cfg):
   manifold = make(cfg, 'manifold')
   if cfg.geodesic:
     manifold = GeodesicManifold(manifold)
-  geometry = make(cfg, 'geometry')
-  density = make(cfg, 'density')
+  if cfg.geometry != {}:
+    geometry = make(cfg, 'geometry', dim=manifold.ambient_dim)
+  else:
+    geometry = manifold
+  density = make(cfg, 'density', geometry=geometry, dim=manifold.ambient_dim)
   rewarder = None
   visualizer = Visualizer(
     interface=cfg.interface, 
@@ -167,6 +170,7 @@ def main(cfg):
       # Learn.
       if density is not None:
         density.learn(samples_tensor)
+        geometry.learn(samples_tensor)
       # TODO. Learn policy if required.
 
       # Add points to render according to scripts. 

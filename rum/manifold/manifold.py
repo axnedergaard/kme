@@ -178,5 +178,9 @@ class Manifold(gymnasium.Env, Density, Geometry):
     # Terence Tao does not know how to do this for surfaces with non-constant curvature: https://mathoverflow.net/questions/37651/riemannian-surfaces-with-an-explicit-distance-function
     raise NotImplementedError
 
+  def interpolate(self, p, q, alpha):
+    # See comment in distance_function.
+    raise NotImplementedError
+
   def learn(self, _):
     pass
