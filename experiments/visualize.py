@@ -38,7 +38,7 @@ def surround(manifold, policy, n=25, radius=0.1, **kwargs):
   directions = np.array([radius * np.array([np.cos(a), np.sin(a)]) for a in angles])
   surrounding_states = []
   for direction in directions:
-    state_after_step = manifold.manifold_step(direction)
+    state_after_step = manifold.manifold_step(state, direction, 1.0)
     surrounding_states.append(state_after_step)
   return np.array(surrounding_states)
 
@@ -85,6 +85,13 @@ class RandomPolicy:
       self.num_repeats += 1 
     return self.action
 
+class ConstantPolicy:
+  def __init__(self, action_space, action=0.0):
+    self.action = np.full(action_space.shape, action)
+
+  def __call__(self, state):
+    return self.action
+
 @hydra.main(config_path='config', config_name='visualize', version_base='1.3')
 def main(cfg):
   # Prepare scripts.
@@ -121,10 +128,13 @@ def main(cfg):
     cursor_target=cfg.cursor_target if 'cursor_target' in cfg else None,
     cursor_color=_get_color(cfg.cursor_color) if 'cursor_color' in cfg else None,
   )
-  if 'policy' in cfg and cfg.policy == 'xtouch':
-    policy = XTouchPolicy(manifold.action_space)
-  else:
-    policy = RandomPolicy(manifold.action_space)
+  if 'policy' in cfg:
+    if cfg.policy == 'xtouch':
+      policy = XTouchPolicy(manifold.action_space)
+    elif cfg.policy == 'random':
+      policy = RandomPolicy(manifold.action_space)
+    elif cfg.policy == 'zero':
+      policy = ConstantPolicy(manifold.action_space, action=0.0)
 
   state, _ = manifold.reset()
 
