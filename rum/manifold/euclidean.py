@@ -26,12 +26,16 @@ class EuclideanManifold(Manifold):
         return 0.0
     elif self.sampler['name'] == 'gaussian': # Isotropic Gaussian.
       return np.exp(-np.sum((p - self.sampler['mean']) ** 2) / (2 * self.sampler['std'] ** 2)) / ((2 * np.pi) ** (self.dim / 2.0) * self.sampler['std'])
+    else:
+      raise ValueError(f'Unknown sampler: {self.sampler["name"]}')
 
   def sample(self, n):
     if self.sampler['name'] == 'uniform':
       return np.random.uniform(self.sampler['low'], self.sampler['high'], (n, self.dim))
     elif self.sampler['name'] == 'gaussian':
       return np.random.normal(self.sampler['mean'], self.sampler['std'], (n, self.dim))
+    else:
+      raise ValueError(f'Unknown sampler: {self.sampler["name"]}')
 
   def grid(self, n):
     # TODO: Could be more efficient.
