@@ -1,4 +1,4 @@
 name: 'TorusManifold'
 dim: ${ambient_dim}
-sampler: 
-  name: 'uniform'
+defaults:
+  - sampler: bivariate_vonmises 

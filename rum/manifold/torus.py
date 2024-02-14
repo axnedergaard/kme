@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.stats import vonmises
 from .manifold import Manifold, GlobalChartAtlas
 
 class TorusManifold(Manifold):
@@ -41,9 +42,23 @@ class TorusManifold(Manifold):
         return (self.R + self.r * (1.0 + np.cos(xi[1]))) / (2.0 * np.pi * (self.R + self.r))
       else:
         return 0.0
-    elif self.sampler['name'] == 'bivariate_von_mises':
-      raise NotImplementedError
+    elif self.sampler['name'] == 'bivariate_vonmises':
+      # We use the cosine variant with no correlation between the two angles.
+      xi = self.map(p)
+      pdf_0 = vonmises.pdf(loc=self.sampler['mu'][0], kappa=self.sampler['kappa'][0], x=xi[0])
+      pdf_1 = vonmises.pdf(loc=self.sampler['mu'][1], kappa=self.sampler['kappa'][1], x=xi[1])
+      return pdf_0 * pdf_1
     else:
+      raise ValueError(f'Unknown sampler: {self.sampler["name"]}')
+
+  def sample(self, n):
+    if self.sampler['name'] == 'uniform':
+      return self.sample_using_random_walk(n_samples=n, steps_per_sample=10)
+    elif self.sampler['name'] == 'bivariate_vonmises':
+      xis_0 = vonmises(loc=self.sampler['mu'][0], kappa=self.sampler['kappa'][0]).rvs(n)
+      xis_1 = vonmises(loc=self.sampler['mu'][1], kappa=self.sampler['kappa'][1]).rvs(n)
+      return np.array([self.inverse_map([xis_0[i], xis_1[i]]) for i in range(n)])
+    else: 
       raise ValueError(f'Unknown sampler: {self.sampler["name"]}')
 
   def grid(self, n):
