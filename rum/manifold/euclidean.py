@@ -32,7 +32,7 @@ class EuclideanManifold(Manifold):
       raise ValueError(f'Unknown sampler: {self.sampler["name"]}')
 
   def sample(self, n):
-    if self.sampler['name'] == 'uniform':
+    if self.sampler['name'] == 'uniform': # TODO. This not correct as it is uniform on unit cube, not ball.
       return np.random.uniform(self.sampler['low'], self.sampler['high'], (n, self.dim))
     elif self.sampler['name'] == 'gaussian':
       return np.random.normal(self.sampler['mean'], self.sampler['std'], (n, self.dim))

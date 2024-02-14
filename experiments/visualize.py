@@ -119,10 +119,10 @@ def main(cfg):
   if cfg.geodesic:
     manifold = GeodesicManifold(manifold)
   if cfg.geometry != {}:
-    geometry = make(cfg, 'geometry', dim=manifold.ambient_dim)
+    geometry = make(cfg, 'geometry', dim=manifold.dim)
   else:
     geometry = manifold
-  density = make(cfg, 'density', geometry=geometry, dim=manifold.ambient_dim)
+  density = make(cfg, 'density', geometry=geometry, dim=manifold.dim)
   rewarder = None
   visualizer = Visualizer(
     interface=cfg.interface, 

@@ -3,8 +3,8 @@ from .manifold import Manifold, GlobalChartAtlas
 
 class TorusManifold(Manifold):
   def __init__(self, dim, sampler):
-    assert dim == 2 # TODO.
-    super(TorusManifold, self).__init__(dim, dim + 1)
+    assert dim == 3 # TODO.
+    super(TorusManifold, self).__init__(dim - 1, dim)
 
     self.sampler = sampler
 
@@ -28,15 +28,15 @@ class TorusManifold(Manifold):
     return self.inverse_map(xi)
 
   def starting_state(self):
-    #local = np.zeros(self.dim) 
+    #local = np.zeros(self.manifold_dim) 
     local = [np.random.uniform(-np.pi, np.pi), 0]
     return self.inverse_map(local)
 
   def pdf(self, p):
     # Uniform.
     if self.sampler['name'] == 'uniform':
-      # TODO. Below ignores constraints on p_0, p_1 and might need an almost_equal function.
-      if p[2] == implicit_function(p): # Check if on surface. 
+      point_is_on_manifold = True # TODO. Implement.
+      if point_is_on_manifold:
         xi = self.map(p) # Points on "inside" of circle around 1-d hole are less likely.
         return (self.R + self.r * (1.0 + np.cos(xi[1]))) / (2.0 * np.pi * (self.R + self.r))
       else:
@@ -46,22 +46,16 @@ class TorusManifold(Manifold):
     else:
       raise ValueError(f'Unknown sampler: {self.sampler["name"]}')
 
-  def sample(self, n):
-    if self.sampler['name'] == 'uniform':
-      raise NotImplementedError
-    elif self.sampler['name'] == 'bivariate_von_mises':
-      raise NotImplementedError
-    else:
-      raise ValueError(f'Unknown sampler: {self.sampler["name"]}')
-
   def grid(self, n):
-    assert self.dim == 2
-    n_per_dim = int(np.power(n, 1.0 / self.dim))
-    local_points = np.zeros([self.dim, n_per_dim])
+    assert self.manifold_dim == 2
+    samples = self.sample(n)
+    return samples
+    n_per_dim = int(np.power(n, 1.0 / self.manifold_dim))
+    local_points = np.zeros([self.manifold_dim, n_per_dim])
     local_points[0] = np.linspace(-np.pi, np.pi, n_per_dim)
     local_points[1] = np.linspace(-np.pi, np.pi, n_per_dim)
     local_mesh = np.meshgrid(*local_points)
-    local_mesh = np.reshape(local_mesh, [self.dim, -1]).T
+    local_mesh = np.reshape(local_mesh, [self.manifold_dim, -1]).T
     mesh = np.stack([self.inverse_map(local_point) for local_point in local_mesh])
     return mesh 
 

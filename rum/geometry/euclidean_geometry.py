@@ -25,7 +25,6 @@ class EuclideanGeometry(Geometry):
         #    x_expanded = x[:, None, :]  # shape (B1, 1, embedding_dim)
         #    y_expanded = y[None, :, :]  # shape (1, B2, embedding_dim)
         #    d = torch.norm(x_expanded - y_expanded, p=2, dim=-1)
-        
         return d # pairwise (B,) or matrix (B1, B2)
 
 

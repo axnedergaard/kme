@@ -32,9 +32,9 @@ class GeodesicManifold():
     self.__dict__['base_object'] = base_object # Avoid infinite recursion on __setattr__().
     # Action space is rotation and thrust.
     max_angle = np.pi / 4
-    self.action_space = gymnasium.spaces.Box(low=np.array([-1.0] + [-max_angle] * (self.dim - 1)), high=np.array([1.0] + [max_angle] * (self.dim - 1))) #, shape=[self.dim])
+    self.action_space = gymnasium.spaces.Box(low=np.array([-1.0] + [-max_angle] * (self.manifold_dim - 1)), high=np.array([1.0] + [max_angle] * (self.manifold_dim - 1))) #, shape=[self.dim])
     #self.velocity = np.array([1.0] + [0.0] * (self.dim - 1))
-    self.velocity = sphere_sample_uniform(self.dim - 1)[0]
+    self.velocity = sphere_sample_uniform(self.manifold_dim - 1)[0]
 
   def parallel_transport(self, previous_state, state, vector):
     # If the chart is unchanged, parallel transport in the coordinate bases is represented by the identity matrix. For changed charts, we must perform the change of basis at a given point.
@@ -82,12 +82,12 @@ class GeodesicManifold():
     return setattr(self.base_object, name, value)
 
 class Manifold(gymnasium.Env, Density, Geometry):
-  def __init__(self, dim, ambient_dim):
-    self.dim = dim
-    self.ambient_dim = ambient_dim 
+  def __init__(self, manifold_dim, ambient_dim):
+    super(Manifold, self).__init__(dim=ambient_dim) # This call sets self.dim = ambient_dim.
+    self.manifold_dim = manifold_dim 
     self.max_step_size = 0.2 
-    self.observation_space = gymnasium.spaces.Box(low=-1.0, high=1.0, shape=[self.ambient_dim]) 
-    self.action_space = gymnasium.spaces.Box(low=-1.0, high=1.0, shape=[self.dim])
+    self.observation_space = gymnasium.spaces.Box(low=-1.0, high=1.0, shape=[ambient_dim]) 
+    self.action_space = gymnasium.spaces.Box(low=-1.0, high=1.0, shape=[manifold_dim])
     self.atlas = None
 
   def reset(self, seed=None):
@@ -112,7 +112,7 @@ class Manifold(gymnasium.Env, Density, Geometry):
       prob_state = self.pdf(state)
       accepted = False
       while not accepted:
-        change_state = sphere_sample_uniform(self.dim - 1)[0]
+        change_state = sphere_sample_uniform(self.manifold_dim - 1)[0]
         updated_state = self.manifold_step(state, change_state, step_size if step_size is not None else self.max_step_size)
         prob_updated_state = self.pdf(updated_state)
         if np.random.uniform() < prob_updated_state / prob_state:
@@ -159,15 +159,6 @@ class Manifold(gymnasium.Env, Density, Geometry):
       updated_p = p + step_size * v
     return updated_p 
 
-  def starting_state(self):
-    raise NotImplementedError
-
-  def pdf(self, p):
-    raise NotImplementedError
-
-  def sample(self):
-    raise NotImplementedError
-
   def grid(self, n):
     raise NotImplementedError
 
@@ -176,10 +167,6 @@ class Manifold(gymnasium.Env, Density, Geometry):
 
   def distance_function(self, p, q):
     # Terence Tao does not know how to do this for surfaces with non-constant curvature: https://mathoverflow.net/questions/37651/riemannian-surfaces-with-an-explicit-distance-function
-    raise NotImplementedError
-
-  def interpolate(self, p, q, alpha):
-    # See comment in distance_function.
     raise NotImplementedError
 
   def learn(self, _):

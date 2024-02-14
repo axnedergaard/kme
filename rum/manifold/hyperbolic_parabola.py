@@ -4,8 +4,8 @@ from .manifold import Manifold, GlobalChartAtlas
 
 class HyperbolicParabolaManifold(Manifold):
   def __init__(self, dim, sampler=None):
-    assert dim == 2 
-    super(HyperbolicParabolaManifold, self).__init__(dim, dim + 1)
+    assert dim == 3 
+    super(HyperbolicParabolaManifold, self).__init__(dim - 1, dim)
 
     self.atlas = GlobalChartAtlas(
       self.map,

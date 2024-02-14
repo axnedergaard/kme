@@ -4,8 +4,8 @@ from .manifold import Manifold
 
 class HyperboloidManifold(Manifold):
   def __init__(self, dim, sampler=None):
-    assert dim == 2 # TODO.
-    super(HyperboloidManifold, self).__init__(dim, dim + 1)
+    assert dim == 3 # TODO.
+    super(HyperboloidManifold, self).__init__(dim - 1, dim)
     self.a = 2**-0.5
     self.c = 1.0
 

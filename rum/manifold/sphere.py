@@ -119,18 +119,18 @@ class SphereAtlas(Atlas):
 class SphereManifold(Manifold):
   # We assume unit radius.
   def __init__(self, dim, sampler):
-    assert dim == 2 
-    super(SphereManifold, self).__init__(dim, dim + 1)
+    assert dim == 3
+    super(SphereManifold, self).__init__(dim - 1, dim)
     self.sampler = sampler
     self.atlas = SphereAtlas()
 
   def starting_state(self):
-    return sphere_sample_uniform(self.dim)[0]
+    return sphere_sample_uniform(self.manifold_dim)[0]
 
   def pdf(self, p):
     if self.sampler['name'] == 'uniform':
       if np.linalg.norm(p) == 1: 
-        return 1.0 / (2.0 * np.pi) ** (self.dim / 2.0) 
+        return 1.0 / (2.0 * np.pi) ** (self.manifold_dim / 2.0) 
       else:
         return 0.0
     elif self.sampler['name'] == 'vonmises_fisher':
@@ -140,7 +140,7 @@ class SphereManifold(Manifold):
 
   def sample(self, n):
     if self.sampler['name'] == 'uniform':
-      return sphere_sample_uniform(self.dim, n)
+      return sphere_sample_uniform(self.manifold_dim, n)
     elif self.sampler['name'] == 'vonmises_fisher':
       return scipy.stats.vonmises_fisher.rvs(self.sampler['mu'], self.sampler['kappa'], size=n)
     else:
@@ -166,4 +166,4 @@ class SphereManifold(Manifold):
   def interpolate(self, p, q, alpha):
     # Computer graphics people already solved this to interpolate rotatations.
     # https://en.wikipedia.org/wiki/Slerp#Geometric_Slerp
-    return torch.tensor(geometric_slerp(p, q, alpha, tol=1e-4), dtype=torch.float32)
+    return torch.tensor(geometric_slerp(p, q, alpha), dtype=torch.float32)
