@@ -1,6 +1,7 @@
 import numpy as np
 import itertools
 from scipy.spatial import geometric_slerp
+from scipy.stats import vonmises_fisher
 import torch
 from .manifold import Manifold, Atlas, Chart
 from .util import sphere_sample_uniform
@@ -134,7 +135,7 @@ class SphereManifold(Manifold):
       else:
         return 0.0
     elif self.sampler['name'] == 'vonmises_fisher':
-      return scipy.stats.vonmises_fisher.pdf(p, self.sampler['mu'], self.sampler['kappa'])
+      return vonmises_fisher.pdf(p, self.sampler['mu'], self.sampler['kappa'])
     else:
       raise ValueError(f'Unknown sampler: {self.sampler["name"]}')
 
@@ -142,7 +143,7 @@ class SphereManifold(Manifold):
     if self.sampler['name'] == 'uniform':
       return sphere_sample_uniform(self.manifold_dim, n)
     elif self.sampler['name'] == 'vonmises_fisher':
-      return scipy.stats.vonmises_fisher.rvs(self.sampler['mu'], self.sampler['kappa'], size=n)
+      return vonmises_fisher.rvs(self.sampler['mu'], self.sampler['kappa'], size=n)
     else:
       raise ValueError(f'Unknown sampler: {self.sampler["name"]}')
 
