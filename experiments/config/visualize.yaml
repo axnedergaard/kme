@@ -5,9 +5,9 @@ hydra:
 
 defaults:
   - _self_
-  - manifold: hyperbolic_parabola 
-    #- density: kmeans
-  - density: null 
+  - manifold: torus 
+  - geometry: euclidean
+  - density: none 
   - override hydra/hydra_logging: disabled  
   - override hydra/job_logging: disabled
 

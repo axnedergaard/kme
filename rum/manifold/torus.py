@@ -1,8 +1,22 @@
 import numpy as np
 from scipy.stats import vonmises
+from scipy.stats.sampling import SimpleRatioUniforms
 from .manifold import Manifold, GlobalChartAtlas
 
+def torus_uniform_outer_angle_pdf(x, R, r):
+  return (R + r * (1.0 + np.cos(x))) / (2.0 * np.pi * (R + r))
+
+class TorusUniformOuterAngleDist():
+  # Required for efficient rejection sampling using scipy.stats.sampling.SimpleRatioUniforms.
+  def __init__(self, R, r):
+    self.R = R
+    self.r = r
+
+  def pdf(self, x):
+    return torus_uniform_outer_angle_pdf(x, self.R, self.r)
+
 class TorusManifold(Manifold):
+  # TODO. Methods pdf and sample can be optimized by making samplers during initialization.
   def __init__(self, dim, sampler):
     assert dim == 3 # TODO.
     super(TorusManifold, self).__init__(dim - 1, dim)
@@ -38,8 +52,11 @@ class TorusManifold(Manifold):
     if self.sampler['name'] == 'uniform':
       point_is_on_manifold = True # TODO. Implement.
       if point_is_on_manifold:
-        xi = self.map(p) # Points on "inside" of circle around 1-d hole are less likely.
-        return (self.R + self.r * (1.0 + np.cos(xi[1]))) / (2.0 * np.pi * (self.R + self.r))
+        # Points on "inside" of circle around 1-d hole are less likely.
+        xi = self.map(p)         
+        pdf_0 = 1.0 / (2.0 * np.pi)
+        pdf_1 = torus_uniform_outer_angle_pdf(xi[1], self.R, self.r)
+        return pdf_0 * pdf_1
       else:
         return 0.0
     elif self.sampler['name'] == 'bivariate_vonmises':
@@ -53,18 +70,22 @@ class TorusManifold(Manifold):
 
   def sample(self, n):
     if self.sampler['name'] == 'uniform':
-      return self.sample_using_random_walk(n_samples=n, steps_per_sample=10)
+      xi = np.zeros([n, self.manifold_dim])
+      xi[:, 0] = np.random.uniform(-np.pi, np.pi, n)
+      dist = TorusUniformOuterAngleDist(self.R, self.r) 
+      uniform = SimpleRatioUniforms(dist, mode=0.0, domain=[-np.pi, np.pi])
+      xi[:, 1] = uniform.rvs(n)
+      return np.apply_along_axis(self.inverse_map, 1, xi)
     elif self.sampler['name'] == 'bivariate_vonmises':
-      xis_0 = vonmises(loc=self.sampler['mu'][0], kappa=self.sampler['kappa'][0]).rvs(n)
-      xis_1 = vonmises(loc=self.sampler['mu'][1], kappa=self.sampler['kappa'][1]).rvs(n)
-      return np.array([self.inverse_map([xis_0[i], xis_1[i]]) for i in range(n)])
+      xi = np.zeros([n, self.manifold_dim])
+      xi[:, 0] = vonmises(loc=self.sampler['mu'][0], kappa=self.sampler['kappa'][0]).rvs(n)
+      xi[:, 1] = vonmises(loc=self.sampler['mu'][1], kappa=self.sampler['kappa'][1]).rvs(n)
+      return np.apply_along_axis(self.inverse_map, 1, xi)
     else: 
       raise ValueError(f'Unknown sampler: {self.sampler["name"]}')
 
   def grid(self, n):
     assert self.manifold_dim == 2
-    samples = self.sample(n)
-    return samples
     n_per_dim = int(np.power(n, 1.0 / self.manifold_dim))
     local_points = np.zeros([self.manifold_dim, n_per_dim])
     local_points[0] = np.linspace(-np.pi, np.pi, n_per_dim)

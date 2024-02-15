@@ -45,13 +45,3 @@ class Density():
         Returns: float: Entropy value.
         """
         raise NotImplementedError()
-
-    def sample_using_random_walk(self, n_samples: int, steps_per_sample: int) -> torch.Tensor:
-        # Generate samples using the random_walk method.
-        random_walk_samples = self.random_walk(n_samples * steps_per_sample)
-        permutation = torch.randperm(random_walk_samples.shape[0])
-        indices = permutation[:n_samples]
-        samples = random_walk_samples[indices]
-        if n_samples == 1: # Torch indexing returns the element if indices has length 1.
-          samples = samples[None, :] 
-        return samples
