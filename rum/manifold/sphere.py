@@ -7,112 +7,95 @@ from .manifold import Manifold, Atlas, Chart
 from .util import sphere_sample_uniform
 
 class SphereAtlas(Atlas):
-  @staticmethod
-  def map_0(p):
-    return np.array([
-      p[0] / (1 + p[2]),
-      p[1] / (1 + p[2])
-    ])
-  @staticmethod
-  def map_1(p):
-    return np.array([
-      p[0] / (1 - p[2]),
-      p[1] / (1 - p[2])
-    ])
+  # Atlas for n-sphere using stereographic projections.
+  def map_0(self, p):
+    return np.array([p[i] / (1.0 + p[self.n]) for i in range(self.n)])
 
-  @staticmethod
-  def inverse_map_0(xi):
-    a = xi[0]**2 + xi[1]**2
-    return (1 / (a + 1)) * np.array([
-      2 * xi[0],
-      2 * xi[1],
-      1 - a 
-    ])
+  def map_1(self, p):
+    return np.array([p[i] / (1.0 - p[self.n]) for i in range(self.n)])
 
-  @staticmethod
-  def inverse_map_1(xi):
-    a = xi[0]**2 + xi[1]**2
-    return (1 / (a + 1)) * np.array([
-      2 * xi[0],
-      2 * xi[1],
-      a - 1
-    ])
+  def inverse_map_0(self, xi):
+    a = np.sum(xi ** 2)
+    return (1.0 / (a + 1.0)) * np.concatenate((2 * xi, [1.0 - a]))
 
-  @staticmethod
-  def differential_map_0(p):
-    return (1 / (1 + p[2])) * np.array([
-      [1, 0, -p[0] / (1 + p[2])],
-      [0, 1, -p[1] / (1 + p[2])]
-    ])
+  def inverse_map_1(self, xi):
+    a = np.sum(xi ** 2)
+    return (1.0 / (a + 1.0)) * np.concatenate((2 * xi, [a - 1.0]))
 
-  @staticmethod
-  def differential_map_1(p):
-    return (1 / (1 - p[2])) * np.array([
-      [1, 0, p[0] / (1 - p[2])],
-      [0, 1, p[1] / (1 - p[2])]
-    ])
-
-  @staticmethod
-  def differential_inverse_map_0(xi):
-    a = xi[0]**2 + xi[1]**2
-    m_1 = np.array([
-      [1, 0],
-      [0, 1],
-      [0, 0]
-    ])
-    m_2 = np.array([
-      [xi[0] ** 2, xi[0] * xi[1]],
-      [xi[0] * xi[1], xi[1] ** 2],
-      [xi[0], xi[1]]
-    ])
-    return (2 / (1 + a)) * m_1 - (2 / (1 + a)) ** 2 * m_2
-
-  @staticmethod
-  def differential_inverse_map_1(xi):
-    a = xi[0]**2 + xi[1]**2
-    m_1 = np.array([
-      [1, 0],
-      [0, 1],
-      [0, 0]
-    ])
-    m_2 = np.array([
-      [xi[0] ** 2, xi[0] * xi[1]],
-      [xi[0] * xi[1], xi[1] ** 2],
-      [-xi[0], -xi[1]]
-    ])
-    return (2 / (1 + a)) * m_1 - (2 / (1 + a)) ** 2 * m_2
-
-  @staticmethod
-  def norm_0(p, v):
+  def norm_0(self, p, v):
     # TODO. Can optimize by not computing Euclidean norm.
-    return (1 + p[2]) * np.linalg.norm(v)
+    return (1.0 + p[self.n]) * np.linalg.norm(v)
 
-  @staticmethod
-  def norm_1(p, v):
+  def norm_1(self, p, v):
     # TODO. Can optimize by not computing Euclidean norm.
-    return (1 - p[2]) * np.linalg.norm(v)
+    return (1.0 - p[self.n]) * np.linalg.norm(v)
 
-  def __init__(self):
+  def differential_map_0(self, p):
+    raise NotImplementedError
+    #return (1 / (1 + p[2])) * np.array([
+    #  [1, 0, -p[0] / (1 + p[2])],
+    #  [0, 1, -p[1] / (1 + p[2])]
+    #])
+
+  def differential_map_1(self, p):
+    raise NotImplementedError
+    #return (1 / (1 - p[2])) * np.array([
+    #  [1, 0, p[0] / (1 - p[2])],
+    #  [0, 1, p[1] / (1 - p[2])]
+    #])
+
+  def differential_inverse_map_0(self, xi):
+    raise NotImplementedError
+    #a = xi[0]**2 + xi[1]**2
+    #m_1 = np.array([
+    #  [1, 0],
+    #  [0, 1],
+    #  [0, 0]
+    #])
+    #m_2 = np.array([
+    #  [xi[0] ** 2, xi[0] * xi[1]],
+    #  [xi[0] * xi[1], xi[1] ** 2],
+    #  [xi[0], xi[1]]
+    #])
+    #return (2 / (1 + a)) * m_1 - (2 / (1 + a)) ** 2 * m_2
+
+  def differential_inverse_map_1(self, xi):
+    raise NotImplementedError
+    #a = xi[0]**2 + xi[1]**2
+    #m_1 = np.array([
+    #  [1, 0],
+    #  [0, 1],
+    #  [0, 0]
+    #])
+    #m_2 = np.array([
+    #  [xi[0] ** 2, xi[0] * xi[1]],
+    #  [xi[0] * xi[1], xi[1] ** 2],
+    #  [-xi[0], -xi[1]]
+    #])
+    #return (2 / (1 + a)) * m_1 - (2 / (1 + a)) ** 2 * m_2
+
+  def __init__(self, n):
     super(SphereAtlas, self).__init__()
+    self.n = n # Dimension of sphere (ambient dimension is n + 1).
     self.charts = [
       Chart(
-        SphereAtlas.map_0, 
-        SphereAtlas.inverse_map_0, 
-        SphereAtlas.norm_0,
-        SphereAtlas.differential_map_0,
-        SphereAtlas.differential_inverse_map_0
+        self.map_0, 
+        self.inverse_map_0, 
+        self.norm_0,
+        self.differential_map_0,
+        self.differential_inverse_map_0
       ),
       Chart(
-        SphereAtlas.map_1, 
-        SphereAtlas.inverse_map_1, 
-        SphereAtlas.norm_1,
-        SphereAtlas.differential_map_1,
-        SphereAtlas.differential_inverse_map_1
+        self.map_1, 
+        self.inverse_map_1, 
+        self.norm_1,
+        self.differential_map_1,
+        self.differential_inverse_map_1
       ),
     ]
 
   def get_chart(self, p):
-    if p[2] >= 0:
+    if p[self.n] >= 0:
       return self.charts[0]
     else:
       return self.charts[1]
@@ -120,10 +103,9 @@ class SphereAtlas(Atlas):
 class SphereManifold(Manifold):
   # We assume unit radius.
   def __init__(self, dim, sampler):
-    assert dim == 3
     super(SphereManifold, self).__init__(dim - 1, dim)
     self.sampler = sampler
-    self.atlas = SphereAtlas()
+    self.atlas = SphereAtlas(dim - 1)
 
   def starting_state(self):
     return sphere_sample_uniform(self.manifold_dim)[0]
