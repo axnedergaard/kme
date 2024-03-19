@@ -2,7 +2,7 @@ import faiss
 import torch
 
 from rum.density import Density
-from rum.density.kmeans_estimator import EntropicFunction
+from rum.density.entropic_functions import EntropicFunction
 
 from torch import Tensor
 from typing import Optional
