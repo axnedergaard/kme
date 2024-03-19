@@ -1,79 +1,41 @@
-# k-Means Maximum Entropy Exploration
+# Entropy Estimation for Exploration
 
-https://arxiv.org/abs/2205.15623
+- Exploration in high-dimensional, continuous spaces with sparse rewards in RL
+- This work introduce a novel k-means density estimator to perform maximum entropy
+- Our density estimator is benchmarked against knn on [DeepMind Mujoco](https://github.com/google-deepmind/mujoco) environments
 
-## To install
+## How to install dependencies
 
-Experimental framework and PyTorch KME
-```
-pip install -r requirements.txt
-# will install torchkme from GitHub or manually:
-# cd kme.all/kme.py && pip install -e .
-```
-
-C++ KME implementation and experiments
-```
-cd kme.all/kme.cpp && make && pip install -e .
+Git clone and install repo dependencies;
+```bash
+$ git clone https://github.com/andreakiro/rum && cd rum
+$ pip install -r requirements.txt # install deps
+$ pip install -e . # install rum
 ```
 
-## Repo structure
-
-#### `framework`
-- a simple framework to explore and play
-- implements manifolds to run experiments
-
-#### `kme.all/kme.cpp`
-- a C++ implementation of KME
-- a Python wrapped library for the C++ implementation
-- code to reproduce entropy experiments
-
-#### `kme.all/kme.py`
-- Python package of PyTorch KME implementation
-
-#### `mujoco`
-- code to reproduce experiments in mujoco envs
-
-
-## Experiments
-
-To run entropy experiments, use the compiled binary kme/entropy. To see options
-```
-./entropy --help  
+You will also need our hacked fork of SB3;
+```bash
+$ pip install git+https://github.com/andreakiro/stable-baselines3-rum.git
 ```
 
-To run exploration experiments, use the script mujoco/train.py. You must install the modified stable-baselines3 repository found in mujoco/libs. The script requires the environment variable DEVICE to set the PyTorch device. To see options
+You should be ready to go now.
 
+## Rum package
+
+Rum is a package with important abstraction;
+- `rum.density` : kmeans and knn density estimators
+- `rum.environment` : mujoco environment gym wrappers
+- `rum.geometry` : networks to learn manifold geometry
+- `rum.manifold` : handcrafted Riemanian manifolds
+- `rum.rewarder` : curiosity rewarders (density wrappers)
+
+## Run experiments
+
+Feel free to modify the configs in `experiments.config` then
+```bash
+$ python experiments/run.py --kwargs # run experiment
+$ python experiments/plot.py --kwargs # plot experimental results
+$ python experiments/visualize.py --kwargs # visualize manifold
 ```
-python train.py --help
-```
 
-Please refer to the paper for parameter values. 
-
-# To-Dos
-
-- [x] Handle batches in online kmeans (w/ shuffling) @ap
-- [x] Add initialization techniques to kmeans @ap
-- [x] Implement Density, OnlineEstimators and KMeans @ap
-- [x] Optimize calls for batches and matmuls @ap
-- [x] Fix bug of point spwaning at (0) in viz @xan
-- [x] Write down skeleton of rl experiment script @xan
-- [x] Restructure repository according to rl exp @both
-- [x] Fix logic flaw on kmeans encoder for distances @ap
-- [x] Dataset: if n(samples) < 2: dont train @ap
-- [x] Bring out the device, dtype @ap
-- [x] Change logic for the sequential rewards @ap
-- [x] Add function to parallelize @ap
-- [] Add learned distance in update_distances <= @ap
-- [] Pathological: first_mask FALSE AND closest_idx @ap
-- [] Infer_batch, call twice the min @ap
-- [] Pairwise_distance optimization @ap
-- [] Port to tensor logic to user with utils @ap
-- [] Port distances stuff into kmeans_estimator @ap
-- [] Use camel case convention for filenames @ap
-- [] Add seed logic for reproducibility @ap
-- [] Reorder manifolds classes @xan
-- [] Add online knn density estimator @ap
-- [] Fix vizualizer to handle any np.array shape @xan
-- [] Lay down clear plan for all experiments in paper @both
-- [] (Future) kmeans estimator: add interpolate function @ap
-
+Please refer to the paper for optimal parameter values. 
