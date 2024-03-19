@@ -1,0 +1,3 @@
+name: 'KNNDensityEstimator'
+k: 300
+buffer_max_size: 1000

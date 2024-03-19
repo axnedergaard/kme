@@ -28,15 +28,17 @@ class KNNRewarder(Rewarder):
 
     def __init__(
         self,
-        knn_params: KNNDensityEstimatorParams,
-        rewarder_params: KNNRewarderParams,
-        torch_env: TorchEnvParams,
+        #knn_params: KNNDensityEstimatorParams,
+        density: KNNDensityEstimator,
+        rewarder_params: KNNRewarderParams = None,
+        torch_env: TorchEnvParams = None,
         concurrent: bool = True,
     ):
         super(KNNRewarder, self).__init__(concurrent)
-        self.torch_env = torch_env
-        self.rewarder_params = rewarder_params
-        self.knn = KNNDensityEstimator(**knn_params.__dict__)
+        self.torch_env = torch_env or TorchEnvParams()
+        self.rewarder_params = rewarder_params or KNNRewarderParams()
+        #self.knn = KNNDensityEstimator(**knn_params.__dict__)
+        self.knn = density
 
     def reward_function(self, states: Tensor) -> FloatTensor:
         if states.dim() == 2:
@@ -47,7 +49,7 @@ class KNNRewarder(Rewarder):
             rewards = self._reward_function(states)
             return rewards.view(num_steps, num_envs)
         
-    def _reward_function(self, states: Tensor, form: Literal['entropy', 'information'] = 'entropy') -> FloatTensor:
+    def _reward_function(self, states: Tensor, form: Literal['entropy', 'information'] = 'information') -> FloatTensor:
         if not isinstance(states, Tensor):
             raise ValueError("States must be of shape (B, dim_states)")
         

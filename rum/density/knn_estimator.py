@@ -10,10 +10,10 @@ from typing import Optional
 
 class KNNDensityEstimator(Density):
 
-    def __init__(self, k, dim, buffer_size, entropic_func: EntropicFunction = None):
+    def __init__(self, k, dim, buffer_max_size, entropic_func: EntropicFunction = None, **kwargs):
         self.k: int = k
         self.dim = dim
-        self.buffer = torch.zeros((buffer_size, dim))
+        self.buffer = torch.zeros((buffer_max_size, dim))
         self.buffer_size = 0
         self.entropic_func = entropic_func if entropic_func is not None \
             else EntropicFunction("log", eps=1)
@@ -47,6 +47,7 @@ class KNNDensityEstimator(Density):
         self.entropy_approx()
 
     def entropy_approx(self, distances: Optional[Tensor] = None) -> Tensor:
+        # TODO This function still has a bug with dimensions.
         assert distances is None or distances.shape == (self.buffer_size, self.buffer_size)
         distances = distances or self.compute_distances(self.buffer[:self.buffer_size], self.buffer, self.buffer_size)
         pdf_approxs = (1.0 / self.k) * torch.sum(distances, dim=1)
