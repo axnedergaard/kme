@@ -38,4 +38,61 @@ $ python experiments/plot.py --kwargs # plot experimental results
 $ python experiments/visualize.py --kwargs # visualize manifold
 ```
 
+The idea is that you can pass any of the following hook scripts to`run.py`;
+- `intrinsic_reward(rollouts, **kwargs)`
+- `extrinsic_reward(rollouts, **kwargs)`
+- `pathological_updates(density, **kwargs)`
+- `entropy(density, **kwargs)`
+- `kmeans_loss(density, manifold, n=1e4, **kwargs)`
+- `kmeans_count_variance(density, **kwargs)`
+- `pdf_loss(manifold, density, n_points=1000, **kwargs)`
+- `distance_loss(manifold, geometry, n_points=1000, **kwargs)`
+- `state(samples, **kwargs)`
+
+This will store results in your outputs directory and on wnb. You can then plot;
+- `pdf_loss_vs_steps(data, **kwargs)`
+- `distance_loss_vs_steps(data, **kwargs)`
+- `count_variance_vs_beta(data, **kwargs)`
+- `kmeans_loss_vs_k(data, **kwargs)`
+- `extrinsic_rewards_vs_steps_single_env(data, ax: Axes = None, **kwargs)`
+
+## A few examples
+
+Density estimation experiments;
+```bash
+$ python experiments/run.py density=kmeans +script.pdf_loss=1 --kwargs
+$ python experiments/run.py density=knn +script.pdf_loss=1 --kwargs
+$ python experiments/plot.py +script.pdf_loss_vs_steps=1
+```
+
+Entropy estimation experiments;
+```bash
+$ python experiments/run.py density=kmeans +script.pdf_loss=1 --kwargs
+$ python experiments/run.py density=knn +script.pdf_loss=1 --kwargs
+$ python experiments/plot.py +script.pdf_loss_vs_steps=1
+```
+
+Kmeans loss experiments;
+```bash
+$ python experiments/run.py density=kmeans density.k=100 +script.kmeans_loss=1
+$ python experiments/plot.py +script.kmeans_loss_vs_k=1
+```
+
+Kmeans count variance experiments;
+```bash
+$ python experiments/run.py density=kmeans +script.kmeans_count_variance=1
+$ python experiments/plot.py +script.count_variance_vs_beta=1
+```
+
+Reinforcement learning experiments;
+```bash
+$ python experiments/run.py +script.extrinsic_reward=1
+$ python experiments/plot.py exp_names=\["frivolous-heroine","waiting-penalty"\] +script.extrinsic_rewards_vs_steps_single_env=1
+```
+
+Kmeans bound uniformity (Voronoi);
+```bash
+$ python  experiments/voronoi.py
+```
+
 Please refer to the paper for optimal parameter values. 
